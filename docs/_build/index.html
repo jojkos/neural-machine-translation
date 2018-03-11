@@ -1,0 +1,642 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to nmt’s documentation! &#8212; nmt 1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-nmt-s-documentation">
+<h1>Welcome to nmt’s documentation!<a class="headerlink" href="#welcome-to-nmt-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<div class="section" id="module-nmt.dataset">
+<span id="nmt-dataset-module"></span><h2>nmt.dataset module<a class="headerlink" href="#module-nmt.dataset" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="nmt.dataset.Dataset">
+<em class="property">class </em><code class="descclassname">nmt.dataset.</code><code class="descname">Dataset</code><span class="sig-paren">(</span><em>dataset_path</em>, <em>source_lang</em>, <em>target_lang</em>, <em>num_samples</em>, <em>tokenize</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/dataset.html#Dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.dataset.Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class encapsuling loading of the dataset from file</p>
+<dl class="method">
+<dt id="nmt.dataset.Dataset.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>dataset_path</em>, <em>source_lang</em>, <em>target_lang</em>, <em>num_samples</em>, <em>tokenize</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/dataset.html#Dataset.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.dataset.Dataset.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dataset_path</strong> (<em>str</em>) – path to the dataset</li>
+<li><strong>source_lang</strong> (<em>str</em>) – source language code (extension of the dataset file)</li>
+<li><strong>target_lang</strong> (<em>str</em>) – target language code (extension of the dataset file)</li>
+<li><strong>num_samples</strong> (<em>int</em>) – how many lines from the file should be read</li>
+<li><strong>tokenize</strong> (<em>bool</em>) – whether the words should be tokenized</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-nmt.special_symbols">
+<span id="nmt-special-symbols-module"></span><h2>nmt.special_symbols module<a class="headerlink" href="#module-nmt.special_symbols" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="nmt.special_symbols.SpecialSymbols">
+<em class="property">class </em><code class="descclassname">nmt.special_symbols.</code><code class="descname">SpecialSymbols</code><a class="reference internal" href="_modules/nmt/special_symbols.html#SpecialSymbols"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Specials symbols that are used and added to target vocabuly</p>
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.EOS">
+<code class="descname">EOS</code><em class="property"> = '_EOS'</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.EOS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.EOS_IX">
+<code class="descname">EOS_IX</code><em class="property"> = 2</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.EOS_IX" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.GO">
+<code class="descname">GO</code><em class="property"> = '_GO'</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.GO" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.GO_IX">
+<code class="descname">GO_IX</code><em class="property"> = 1</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.GO_IX" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.PAD">
+<code class="descname">PAD</code><em class="property"> = '_PAD'</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.PAD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.PAD_IX">
+<code class="descname">PAD_IX</code><em class="property"> = 0</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.PAD_IX" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.UNK">
+<code class="descname">UNK</code><em class="property"> = '_UNK'</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.UNK" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="nmt.special_symbols.SpecialSymbols.UNK_IX">
+<code class="descname">UNK_IX</code><em class="property"> = 3</em><a class="headerlink" href="#nmt.special_symbols.SpecialSymbols.UNK_IX" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-nmt.translator">
+<span id="nmt-translator-module"></span><h2>nmt.translator module<a class="headerlink" href="#module-nmt.translator" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="nmt.translator.Translator">
+<em class="property">class </em><code class="descclassname">nmt.translator.</code><code class="descname">Translator</code><span class="sig-paren">(</span><em>source_lang</em>, <em>model_file</em>, <em>model_folder</em>, <em>target_lang</em>, <em>test_dataset</em>, <em>training_dataset</em>, <em>reverse_input=True</em>, <em>max_source_vocab_size=10000</em>, <em>max_target_vocab_size=10000</em>, <em>source_embedding_path=None</em>, <em>target_embedding_path=None</em>, <em>clear=False</em>, <em>tokenize=True</em>, <em>log_folder='logs/'</em>, <em>num_units=256</em>, <em>num_threads=1</em>, <em>dropout=0.2</em>, <em>optimizer='rmsprop'</em>, <em>source_embedding_dim=300</em>, <em>target_embedding_dim=300</em>, <em>max_source_embedding_num=None</em>, <em>max_target_embedding_num=None</em>, <em>num_training_samples=-1</em>, <em>num_test_samples=-1</em>, <em>num_encoder_layers=1</em>, <em>num_decoder_layers=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Main class of the module, takes care of the datasets, fitting, evaluation and translating</p>
+<dl class="method">
+<dt id="nmt.translator.Translator.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>source_lang</em>, <em>model_file</em>, <em>model_folder</em>, <em>target_lang</em>, <em>test_dataset</em>, <em>training_dataset</em>, <em>reverse_input=True</em>, <em>max_source_vocab_size=10000</em>, <em>max_target_vocab_size=10000</em>, <em>source_embedding_path=None</em>, <em>target_embedding_path=None</em>, <em>clear=False</em>, <em>tokenize=True</em>, <em>log_folder='logs/'</em>, <em>num_units=256</em>, <em>num_threads=1</em>, <em>dropout=0.2</em>, <em>optimizer='rmsprop'</em>, <em>source_embedding_dim=300</em>, <em>target_embedding_dim=300</em>, <em>max_source_embedding_num=None</em>, <em>max_target_embedding_num=None</em>, <em>num_training_samples=-1</em>, <em>num_test_samples=-1</em>, <em>num_encoder_layers=1</em>, <em>num_decoder_layers=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>source_embedding_dim</strong> (<em>int</em>) – Dimension of embeddings</li>
+<li><strong>target_embedding_dim</strong> (<em>int</em>) – Dimension of embeddings</li>
+<li><strong>target_embedding_path</strong> (<em>str</em>) – Path to pretrained fastText embeddings file</li>
+<li><strong>max_source_embedding_num</strong> (<em>int</em>) – how many first lines from embedding file should be loaded, None means all of them</li>
+<li><strong>source_lang</strong> (<em>str</em>) – Source language (dataset file extension)</li>
+<li><strong>num_units</strong> (<em>str</em>) – Size of each network layer</li>
+<li><strong>dropout</strong> (<em>int</em>) – Size of dropout</li>
+<li><strong>optimizer</strong> (<em>str</em>) – Keras optimizer name</li>
+<li><strong>log_folder</strong> (<em>str</em>) – Path where the result logs will be stored</li>
+<li><strong>max_source_vocab_size</strong> (<em>int</em>) – Maximum size of source vocabulary</li>
+<li><strong>max_target_vocab_size</strong> (<em>int</em>) – Maximum size of target vocabulary</li>
+<li><strong>model_file</strong> (<em>str</em>) – Model file name. Either will be created or loaded.</li>
+<li><strong>model_folder</strong> (<em>str</em>) – Path where the result model will be stored</li>
+<li><strong>num_training_samples</strong> (<em>int</em><em>, </em><em>optional</em>) – How many samples to take from the training dataset, -1 for all of them (default)</li>
+<li><strong>num_test_samples</strong> (<em>int</em><em>, </em><em>optional</em>) – How many samples to take from the test dataset, -1 for all of them (default)</li>
+<li><strong>reverse_input</strong> (<em>bool</em>) – Whether to reverse source sequences (optimization for better learning)</li>
+<li><strong>target_lang</strong> (<em>str</em>) – Target language (dataset file extension)</li>
+<li><strong>test_dataset</strong> (<em>str</em>) – Path to the test set. Dataset are two files (one source one target language)</li>
+<li><strong>training_dataset</strong> (<em>str</em>) – Path to the training set</li>
+<li><strong>clear</strong> (<em>bool</em>) – Whether to delete old weights and logs before running</li>
+<li><strong>tokenize</strong> (<em>bool</em>) – Whether to tokenize the sequences or not (they are already tokenizes e.g. using Moses tokenizer)</li>
+<li><strong>num_encoder_layers</strong> (<em>int</em>) – Number of layers in encoder</li>
+<li><strong>num_decoder_layers</strong> (<em>int</em>) – Number of layers in decoder</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="nmt.translator.Translator.decode_encoded_seq">
+<em class="property">static </em><code class="descname">decode_encoded_seq</code><span class="sig-paren">(</span><em>seq</em>, <em>vocab</em>, <em>one_hot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.decode_encoded_seq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.decode_encoded_seq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="nmt.translator.Translator.encode_sequences">
+<em class="property">static </em><code class="descname">encode_sequences</code><span class="sig-paren">(</span><em>x_word_seq</em>, <em>y_word_seq</em>, <em>x_max_seq_len</em>, <em>y_max_seq_len</em>, <em>source_vocab</em>, <em>target_vocab</em>, <em>reverse_input=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.encode_sequences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.encode_sequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take word sequences and convert them so that the model can be fit with them.
+Input words are just converted to integer index
+Target words are encoded to one hot vectors of target vocabulary length</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>x_word_seq</strong> – input word sequences</li>
+<li><strong>y_word_seq</strong> – target word sequences</li>
+<li><strong>x_max_seq_len</strong> (<em>int</em>) – max lengh of input word sequences</li>
+<li><strong>y_max_seq_len</strong> (<em>int</em>) – max lengh of target word sequences</li>
+<li><strong>source_vocab</strong> (<a class="reference internal" href="nmt.html#nmt.vocabulary.Vocabulary" title="nmt.vocabulary.Vocabulary"><em>Vocabulary</em></a>) – source vocabulary object</li>
+<li><strong>target_vocab</strong> (<a class="reference internal" href="nmt.html#nmt.vocabulary.Vocabulary" title="nmt.vocabulary.Vocabulary"><em>Vocabulary</em></a>) – target vocabulary object</li>
+<li><strong>reverse_input</strong> (<em>bool</em>) – whether to reverse input sequences</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: encoder_input_data, decoder_input_data, decoder_target_data</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="nmt.translator.Translator.encode_text_seq_to_encoder_seq">
+<em class="property">static </em><code class="descname">encode_text_seq_to_encoder_seq</code><span class="sig-paren">(</span><em>text</em>, <em>vocab</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.encode_text_seq_to_encoder_seq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.encode_text_seq_to_encoder_seq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes given text sequence to numpy array ready to be used as encoder_input for prediction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>text</strong> (<em>str</em>) – sequence to translate</li>
+<li><strong>vocab</strong> (<a class="reference internal" href="nmt.html#nmt.vocabulary.Vocabulary" title="nmt.vocabulary.Vocabulary"><em>Vocabulary</em></a>) – vocabulary object</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: encoded sequence ready to be used as encoder_inpout for prediction</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.evaluate">
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>batch_size=64</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>performs evaluation on test dataset along with generating translations
+and calculating BLEU score for the dataset</p>
+<p>Returns: Keras model.evaluate values</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>epochs=1</em>, <em>initial_epoch=0</em>, <em>batch_size=64</em>, <em>validation_split=0.0</em>, <em>use_fit_generator=False</em>, <em>bucketing=False</em>, <em>bucket_range=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>fits the model, according to the parameters passed in constructor</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>epochs</strong> – Number of epochs</li>
+<li><strong>initial_epoch</strong> – Epoch number from which to start</li>
+<li><strong>batch_size</strong> – Size of one batch</li>
+<li><strong>validation_split</strong> (<em>float</em>) – How big proportion of a development dataset should be used for validation during fiting</li>
+<li><strong>use_fit_generator</strong> – Prevent memory crash by only load part of the dataset at once each time when fitting</li>
+<li><strong>bucketing</strong> (<em>bool</em>) – Whether to bucket sequences according their size to optimize padding
+automatically switches use_fit_generator to True</li>
+<li><strong>bucket_range</strong> (<em>int</em>) – Range of different sequence lenghts in one bucket</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="nmt.translator.Translator.get_gen_steps">
+<em class="property">static </em><code class="descname">get_gen_steps</code><span class="sig-paren">(</span><em>dataset</em>, <em>batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.get_gen_steps"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.get_gen_steps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns how many steps are needed for the generator to go through the whole dataset with the batch_size</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dataset</strong> – dataset that is beeing proccessed</li>
+<li><strong>batch_size</strong> – size of the batch</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: number of steps for the generatorto go through whole dataset</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.translate">
+<code class="descname">translate</code><span class="sig-paren">(</span><em>seq=None</em>, <em>expected_seq=None</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates given sequence</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seq</strong> – sequence that will be translated from source to target language.</li>
+<li><strong>expected_seq</strong> – optional, expected result of translation</li>
+<li><strong>beam_size</strong> – how many candidate resulsts should be used during inference of the translated sequence for the beam search algorythm</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.translate_sequence">
+<code class="descname">translate_sequence</code><span class="sig-paren">(</span><em>input_seq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate_sequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate_sequence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.translate_sequence_beam">
+<code class="descname">translate_sequence_beam</code><span class="sig-paren">(</span><em>input_seq</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate_sequence_beam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate_sequence_beam" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-nmt.vocabulary">
+<span id="nmt-vocabulary-module"></span><h2>nmt.vocabulary module<a class="headerlink" href="#module-nmt.vocabulary" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="nmt.vocabulary.Vocabulary">
+<em class="property">class </em><code class="descclassname">nmt.vocabulary.</code><code class="descname">Vocabulary</code><span class="sig-paren">(</span><em>word_seq</em>, <em>max_vocab_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/vocabulary.html#Vocabulary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.vocabulary.Vocabulary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Vocabulary used in Dataset class, handles all the tokens that are used for each language</p>
+<dl class="method">
+<dt id="nmt.vocabulary.Vocabulary.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>word_seq</em>, <em>max_vocab_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/vocabulary.html#Vocabulary.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.vocabulary.Vocabulary.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>word_seq</strong> (<code class="xref py py-obj docutils literal"><span class="pre">list</span></code> of <code class="xref py py-obj docutils literal"><span class="pre">str</span></code>) – </li>
+<li><strong>max_vocab_size</strong> – maximum size of the vocabulary, rest will be OOV</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.vocabulary.Vocabulary.get_index">
+<code class="descname">get_index</code><span class="sig-paren">(</span><em>word</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/vocabulary.html#Vocabulary.get_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.vocabulary.Vocabulary.get_index" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>word</strong> (<em>str</em>) – word in the vocabulary</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">index of the word in the vocabulary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.vocabulary.Vocabulary.get_word">
+<code class="descname">get_word</code><span class="sig-paren">(</span><em>ix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/vocabulary.html#Vocabulary.get_word"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.vocabulary.Vocabulary.get_word" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ix</strong> (<em>int</em>) – index in the vocabulary</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">word from vocabulary on index ix</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-nmt">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-nmt" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-nmt.utils.data_utils">
+<span id="nmt-utils-data-utils-module"></span><h2>nmt.utils.data_utils module<a class="headerlink" href="#module-nmt.utils.data_utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="nmt.utils.data_utils.convert_xmlset_to_text">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">convert_xmlset_to_text</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#convert_xmlset_to_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.convert_xmlset_to_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts data sets in xml (sgm) (e.g. <a class="reference external" href="http://www.statmt.org/wmt17/translation-task.html">http://www.statmt.org/wmt17/translation-task.html</a> Development and Test sets
+to text only format (one line, one sequence).
+Creates new file with same name and .lines extension</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> – path to the file</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.get_bucket_ix">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">get_bucket_ix</code><span class="sig-paren">(</span><em>seq_length</em>, <em>bucket_range</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#get_bucket_ix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.get_bucket_ix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns index of a bucket for a sequence with q given length when bucket range is bucket_range</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>seq_length</strong> – lengh of sequence</li>
+<li><strong>bucket_range</strong> – range of bucket</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: index of a bucket</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.load_embedding_weights">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">load_embedding_weights</code><span class="sig-paren">(</span><em>path</em>, <em>words</em>, <em>limit=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#load_embedding_weights"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.load_embedding_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads pretrained embedding weights from given path</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – Path to fast text embeddings</li>
+<li><strong>words</strong> – dictionary of words (e.g. {0: “PAD”, 1: “cat”, 2: “dog”}),
+word on index 0 is considered to be PADDING and its weights are set to 0</li>
+<li><strong>limit</strong> – maximum number of loaded embeddings (lines)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">list of weights in the same order as are words</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.prepare_folder">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">prepare_folder</code><span class="sig-paren">(</span><em>path</em>, <em>clear</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#prepare_folder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.prepare_folder" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> (<em>str</em>) – path to the folder</li>
+<li><strong>clear</strong> (<em>bool</em>) – whether to clear the folder if it already exists</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.prepare_folders">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">prepare_folders</code><span class="sig-paren">(</span><em>paths</em>, <em>clear</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#prepare_folders"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.prepare_folders" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>paths</strong> (<em>str</em><em>[</em><em>]</em>) – list of paths to the folders</li>
+<li><strong>clear</strong> (<em>bool</em>) – whether to clear the folders if they already exists</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.read_file_to_lines">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">read_file_to_lines</code><span class="sig-paren">(</span><em>path</em>, <em>max_lines</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#read_file_to_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.read_file_to_lines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads lines from a given file up to max_lines</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> – path to the file</li>
+<li><strong>max_lines</strong> – maximum number of lines to be read from file, None means all of them</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: list of string lines read from the file</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.split_lines">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">split_lines</code><span class="sig-paren">(</span><em>lines</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#split_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.split_lines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Splits each line on ‘ ‘ character</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lines</strong> (<em>str</em><em>[</em><em>]</em>) – array of lines</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: returns array of splitted sequences</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.split_to_buckets">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">split_to_buckets</code><span class="sig-paren">(</span><em>x_sequences</em>, <em>y_sequences</em>, <em>bucket_range=3</em>, <em>x_max_len=None</em>, <em>y_max_len=None</em>, <em>bucket_min_size=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#split_to_buckets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.split_to_buckets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split list of sequences to list of buckets where each bucket is a list of word sequences
+with similar length (based on the bucket_range size e.g.
+with bucket_size=3 sequences with length 1-3 falls in same bucket)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x_sequences</strong> – one list of sequences</li>
+<li><strong>y_sequences</strong> – another list of sequences</li>
+<li><strong>bucket_range</strong> – size of one bucket (how big range of sequence lengths should fall into one bucket)</li>
+<li><strong>x_max_len</strong> – optional max length of X sequences</li>
+<li><strong>y_max_len</strong> – optional max length of y sequences</li>
+<li><strong>bucket_min_size</strong> – minimal size of a bucket. If its lower, than the bucket gets merged with other bucket</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">dict of buckets each with the Y and y list of similary long sequences and their max length</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.data_utils.tokenize">
+<code class="descclassname">nmt.utils.data_utils.</code><code class="descname">tokenize</code><span class="sig-paren">(</span><em>lines</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#tokenize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.tokenize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tokenizes lines using keras’s text_to_word_sequence</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lines</strong> (<em>str</em><em>[</em><em>]</em>) – array of lines</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: list of splitted word sequences</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-nmt.utils.script_utils">
+<span id="nmt-utils-script-utils-module"></span><h2>nmt.utils.script_utils module<a class="headerlink" href="#module-nmt.utils.script_utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="nmt.utils.script_utils.create_bpe_dataset">
+<code class="descclassname">nmt.utils.script_utils.</code><code class="descname">create_bpe_dataset</code><span class="sig-paren">(</span><em>paths</em>, <em>symbols</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/script_utils.html#create_bpe_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.script_utils.create_bpe_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Learns and applies BPE (<a class="reference external" href="https://github.com/rsennrich/subword-nmt">https://github.com/rsennrich/subword-nmt</a>) on merged vocabulary from each file in paths
+:param paths: array of paths to files with lines of sentences
+:param symbols: how many symbols to learn</p>
+<p class="rubric">Example</p>
+<p>script_utils.create_bpe_dataset([“G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.cs”, “G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.en”], 10)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.script_utils.create_bpe_testdataset">
+<code class="descclassname">nmt.utils.script_utils.</code><code class="descname">create_bpe_testdataset</code><span class="sig-paren">(</span><em>paths</em>, <em>vocab_paths</em>, <em>codefile_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/script_utils.html#create_bpe_testdataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.script_utils.create_bpe_testdataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies BPE to test dataset, based on vocabs and codes learnt from the original dataset
+:param paths: array of paths to test dataset files with lines of sentences
+:param vocab_paths: paths to vocab files created by create_bpe_dataset in corresponding order to paths
+:param codefile_path: path to codes file created by create_bpe_dataset</p>
+<p class="rubric">Example</p>
+<p>script_utils.create_bpe_testdataset([“G:/Clouds/DPbigFiles/WMT17/commonCrawl/commoncrawl.cs-en.cs”, “G:/Clouds/DPbigFiles/WMT17/commonCrawl/commoncrawl.cs-en.en”], [“G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.cs.vocab”, “G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.en.vocab”], “G:/Clouds/DPbigFiles/WMT17/devSet/codesfile”)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.script_utils.get_bleu">
+<code class="descclassname">nmt.utils.script_utils.</code><code class="descname">get_bleu</code><span class="sig-paren">(</span><em>reference_file_path</em>, <em>hypothesis_file_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/script_utils.html#get_bleu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.script_utils.get_bleu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates BLEU score with the reference multi-bleu.perl script from Moses</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>reference_file_path</strong> – path to the reference translation file from the dataset</li>
+<li><strong>hypothesis_file_path</strong> – path to the file translated by the translator</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: BLEU score</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.script_utils.get_script_path">
+<code class="descclassname">nmt.utils.script_utils.</code><code class="descname">get_script_path</code><span class="sig-paren">(</span><em>script_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/script_utils.html#get_script_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.script_utils.get_script_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="id1">
+<h2>Module contents<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-nmt.utils"></span></div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Jonas Holcner.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,990 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>nmt.translator &#8212; nmt 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for nmt.translator</h1><div class="highlight"><pre>
+<span></span><span class="c1"># coding: utf-8</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="kn">from</span> <span class="nn">keras.utils.vis_utils</span> <span class="k">import</span> <span class="n">model_to_dot</span>
+<span class="kn">from</span> <span class="nn">keras.utils</span> <span class="k">import</span> <span class="n">plot_model</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">nmt.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">nmt</span> <span class="k">import</span> <span class="n">SpecialSymbols</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">Vocabulary</span><span class="p">,</span> <span class="n">Candidate</span>
+<span class="kn">from</span> <span class="nn">keras.callbacks</span> <span class="k">import</span> <span class="n">TensorBoard</span><span class="p">,</span> <span class="n">ModelCheckpoint</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">LSTM</span><span class="p">,</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Embedding</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Bidirectional</span><span class="p">,</span> <span class="n">Concatenate</span><span class="p">,</span> <span class="n">Average</span><span class="p">,</span> <span class="n">Dropout</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">keras.preprocessing.text</span> <span class="k">import</span> <span class="n">text_to_word_sequence</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Translator"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator">[docs]</a><span class="k">class</span> <span class="nc">Translator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Main class of the module, takes care of the datasets, fitting, evaluation and translating</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Translator.__init__"><a class="viewcode-back" href="../../index.html#nmt.translator.Translator.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_lang</span><span class="p">,</span> <span class="n">model_file</span><span class="p">,</span> <span class="n">model_folder</span><span class="p">,</span>
+                 <span class="n">target_lang</span><span class="p">,</span> <span class="n">test_dataset</span><span class="p">,</span> <span class="n">training_dataset</span><span class="p">,</span>
+                 <span class="n">reverse_input</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_source_vocab_size</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">max_target_vocab_size</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                 <span class="n">source_embedding_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_embedding_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">clear</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">tokenize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">log_folder</span><span class="o">=</span><span class="s2">&quot;logs/&quot;</span><span class="p">,</span> <span class="n">num_units</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                 <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;rmsprop&quot;</span><span class="p">,</span>
+                 <span class="n">source_embedding_dim</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">target_embedding_dim</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+                 <span class="n">max_source_embedding_num</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_target_embedding_num</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">num_training_samples</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_test_samples</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">num_encoder_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_decoder_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            source_embedding_dim (int): Dimension of embeddings</span>
+<span class="sd">            target_embedding_dim (int): Dimension of embeddings</span>
+<span class="sd">            target_embedding_path (str): Path to pretrained fastText embeddings file</span>
+<span class="sd">            max_source_embedding_num (int): how many first lines from embedding file should be loaded, None means all of them</span>
+<span class="sd">            source_lang (str): Source language (dataset file extension)</span>
+<span class="sd">            num_units (str): Size of each network layer</span>
+<span class="sd">            dropout (int): Size of dropout</span>
+<span class="sd">            optimizer (str): Keras optimizer name</span>
+<span class="sd">            log_folder (str): Path where the result logs will be stored</span>
+<span class="sd">            max_source_vocab_size (int): Maximum size of source vocabulary</span>
+<span class="sd">            max_target_vocab_size (int): Maximum size of target vocabulary</span>
+<span class="sd">            model_file (str): Model file name. Either will be created or loaded.</span>
+<span class="sd">            model_folder (str): Path where the result model will be stored</span>
+<span class="sd">            num_training_samples (int, optional): How many samples to take from the training dataset, -1 for all of them (default)</span>
+<span class="sd">            num_test_samples (int, optional): How many samples to take from the test dataset, -1 for all of them (default)</span>
+<span class="sd">            reverse_input (bool): Whether to reverse source sequences (optimization for better learning)</span>
+<span class="sd">            target_lang (str): Target language (dataset file extension)</span>
+<span class="sd">            test_dataset (str): Path to the test set. Dataset are two files (one source one target language)</span>
+<span class="sd">            training_dataset (str): Path to the training set</span>
+<span class="sd">            clear (bool): Whether to delete old weights and logs before running</span>
+<span class="sd">            tokenize (bool): Whether to tokenize the sequences or not (they are already tokenizes e.g. using Moses tokenizer)</span>
+<span class="sd">            num_encoder_layers (int): Number of layers in encoder</span>
+<span class="sd">            num_decoder_layers (int): Number of layers in decoder</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_dim</span> <span class="o">=</span> <span class="n">source_embedding_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_dim</span> <span class="o">=</span> <span class="n">target_embedding_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_path</span> <span class="o">=</span> <span class="n">source_embedding_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_path</span> <span class="o">=</span> <span class="n">target_embedding_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_source_embedding_num</span> <span class="o">=</span> <span class="n">max_source_embedding_num</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_target_embedding_num</span> <span class="o">=</span> <span class="n">max_target_embedding_num</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_lang</span> <span class="o">=</span> <span class="n">source_lang</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_units</span> <span class="o">=</span> <span class="n">num_units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_threads</span> <span class="o">=</span> <span class="n">num_threads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">dropout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_folder</span> <span class="o">=</span> <span class="n">log_folder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_source_vocab_size</span> <span class="o">=</span> <span class="n">max_source_vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_target_vocab_size</span> <span class="o">=</span> <span class="n">max_target_vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_folder</span> <span class="o">=</span> <span class="n">model_folder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_weights_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">model_folder</span><span class="p">,</span> <span class="n">model_file</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_training_samples</span> <span class="o">=</span> <span class="n">num_training_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_test_samples</span> <span class="o">=</span> <span class="n">num_test_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reverse_input</span> <span class="o">=</span> <span class="n">reverse_input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_lang</span> <span class="o">=</span> <span class="n">target_lang</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset_path</span> <span class="o">=</span> <span class="n">test_dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset_path</span> <span class="o">=</span> <span class="n">training_dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span> <span class="o">=</span> <span class="n">clear</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span> <span class="o">=</span> <span class="n">tokenize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_encoder_layers</span> <span class="o">=</span> <span class="n">num_encoder_layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_decoder_layers</span> <span class="o">=</span> <span class="n">num_decoder_layers</span>
+
+        <span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+        <span class="kn">from</span> <span class="nn">keras.backend.tensorflow_backend</span> <span class="k">import</span> <span class="n">set_session</span>
+
+        <span class="c1"># configure number of threads</span>
+
+        <span class="c1"># intra_op_parallelism_threads = self.num_threads,</span>
+        <span class="c1"># inter_op_parallelism_threads = self.num_threads,</span>
+        <span class="c1"># allow_soft_placement = True,</span>
+        <span class="c1"># device_count = {&#39;CPU&#39;: self.num_threads}</span>
+
+        <span class="c1"># FAILS ON FIT CLUSTER when started manually and not through qsub</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">ConfigProto</span><span class="p">(</span><span class="n">intra_op_parallelism_threads</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_threads</span><span class="p">,</span>
+                                <span class="n">inter_op_parallelism_threads</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_threads</span><span class="p">,</span>
+                                <span class="n">allow_soft_placement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">device_count</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;CPU&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_threads</span><span class="p">})</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">gpu_options</span><span class="o">.</span><span class="n">allow_growth</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">set_session</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">))</span>
+
+        <span class="n">utils</span><span class="o">.</span><span class="n">prepare_folders</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">log_folder</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_folder</span><span class="p">],</span> <span class="n">clear</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_lang</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_lang</span><span class="p">,</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">num_training_samples</span><span class="p">,</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_dataset_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_lang</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_lang</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">num_test_samples</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;There are </span><span class="si">{}</span><span class="s2"> samples in training dataset&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;There are </span><span class="si">{}</span><span class="s2"> samples in test dataset&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span> <span class="o">=</span> <span class="n">Vocabulary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_word_seq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_source_vocab_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span> <span class="o">=</span> <span class="n">Vocabulary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_target_vocab_size</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Source vocabulary has </span><span class="si">{}</span><span class="s2"> symbols&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="o">.</span><span class="n">vocab_len</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Target vocabulary has </span><span class="si">{}</span><span class="s2"> symbols&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="o">.</span><span class="n">vocab_len</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_weights</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_weights_path</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_path</span><span class="p">:</span>
+            <span class="c1"># load pretrained embeddings</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_weights</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_embedding_weights</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_path</span><span class="p">,</span>
+                                                                         <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="o">.</span><span class="n">ix_to_word</span><span class="p">,</span>
+                                                                         <span class="n">limit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_source_embedding_num</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_weights</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_weights_path</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_path</span><span class="p">:</span>
+            <span class="c1"># load pretrained embeddings</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_weights</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_embedding_weights</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_path</span><span class="p">,</span>
+                                                                         <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="o">.</span><span class="n">ix_to_word</span><span class="p">,</span>
+                                                                         <span class="n">limit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_target_embedding_num</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_define_models</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Global model&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Encoder model&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder_model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Decoder model&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder_model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+        <span class="c1"># model_to_dot(self.model).write_pdf(&quot;model.pdf&quot;)</span>
+        <span class="c1"># model_to_dot(self.encoder_model).write_pdf(&quot;encoder_model.pdf&quot;)</span>
+        <span class="c1"># model_to_dot(self.decoder_model).write_pdf(&quot;decoder_model.pdf&quot;)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;compiling model...&quot;</span><span class="p">)</span>
+        <span class="c1"># Run training</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;categorical_crossentropy&#39;</span><span class="p">,</span>
+                           <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;acc&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_weights_path</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading model weights from file..&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_weights</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_weights_path</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_encoded_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">from_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="n">encoder_input_data</span><span class="p">,</span> <span class="n">decoder_input_data</span><span class="p">,</span> <span class="n">decoder_target_data</span> <span class="o">=</span> <span class="n">Translator</span><span class="o">.</span><span class="n">encode_sequences</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">x_word_seq</span><span class="p">[</span><span class="n">from_index</span><span class="p">:</span> <span class="n">to_index</span><span class="p">],</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">[</span><span class="n">from_index</span><span class="p">:</span> <span class="n">to_index</span><span class="p">],</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">x_max_seq_len</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_input</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;encoder_input_data&quot;</span><span class="p">:</span> <span class="n">encoder_input_data</span><span class="p">,</span>
+            <span class="s2">&quot;decoder_input_data&quot;</span><span class="p">:</span> <span class="n">decoder_input_data</span><span class="p">,</span>
+            <span class="s2">&quot;decoder_target_data&quot;</span><span class="p">:</span> <span class="n">decoder_target_data</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_get_training_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Returns: dict with encoder_input_data, decoder_input_data and decoder_target_data of whole dataset size</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_encoded_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="p">,</span> <span class="n">from_index</span><span class="p">,</span> <span class="n">to_index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_training_data_gen_WRONG_SHUFFLE</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bucketing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                         <span class="n">bucket_range</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates generator for keras fit_generator. First yielded value is number of steps needed for whole epoch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            infinite: whether to yield data infinitely or stop after one walkthrough the dataset</span>
+<span class="sd">            shuffle: whether to shuffle the training data and return them in random order every epoch</span>
+<span class="sd">            bucketing: whetether to use bucketing</span>
+<span class="sd">            bucket_range: range of each bucket</span>
+
+<span class="sd">        Returns: First yielded value is number of steps needed for whole epoch.</span>
+<span class="sd">            Then yields ([encoder_input_data, decoder_input_data], decoder_target_data)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># shuffling</span>
+        <span class="c1"># https://stackoverflow.com/questions/46570172/how-to-fit-generator-in-keras</span>
+        <span class="c1"># https://github.com/keras-team/keras/issues/2389</span>
+
+        <span class="c1"># first value returned from generator is the number of steps for the whole epoch</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">bucketing</span><span class="p">:</span>
+            <span class="n">buckets</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">split_to_buckets</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_word_seq</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">,</span>
+                                             <span class="n">bucket_range</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_max_seq_len</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span><span class="p">,</span>
+                                             <span class="n">batch_size</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">bucketing</span><span class="p">:</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+
+                <span class="k">for</span> <span class="n">bucket</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">buckets</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                    <span class="n">bucket_indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">]),</span> <span class="n">batch_size</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">bucket_indices</span><span class="p">:</span>
+                        <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">bucket</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
+
+                <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+                    <span class="n">first</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="n">shuffle</span><span class="p">:</span>
+                    <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">bucket_ix</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                    <span class="n">training_data</span> <span class="o">=</span> <span class="n">Translator</span><span class="o">.</span><span class="n">encode_sequences</span><span class="p">(</span>
+                        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">],</span>
+                        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">],</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_input</span>
+                    <span class="p">)</span>
+                    <span class="k">yield</span> <span class="p">[</span><span class="n">training_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">training_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">training_data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">num_samples</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">))</span>
+
+                <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+                    <span class="n">first</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="n">shuffle</span><span class="p">:</span>
+                    <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                    <span class="n">training_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_training_data</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">)</span>
+                    <span class="k">yield</span> <span class="p">[</span><span class="n">training_data</span><span class="p">[</span><span class="s2">&quot;encoder_input_data&quot;</span><span class="p">],</span> <span class="n">training_data</span><span class="p">[</span><span class="s2">&quot;decoder_input_data&quot;</span><span class="p">]],</span> <span class="n">training_data</span><span class="p">[</span>
+                        <span class="s2">&quot;decoder_target_data&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">infinite</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_training_data_gen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates generator for keras fit_generator. First yielded value is number of steps needed for whole epoch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            infinite: whether to yield data infinitely or stop after one walkthrough the dataset</span>
+<span class="sd">            shuffle: whether to shuffle the training data and return them in random order every epoch</span>
+
+<span class="sd">        Returns: First yielded value is number of steps needed for whole epoch.</span>
+<span class="sd">            Then yields ([encoder_input_data, decoder_input_data], decoder_target_data)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># shuffling</span>
+        <span class="c1"># https://stackoverflow.com/questions/46570172/how-to-fit-generator-in-keras</span>
+        <span class="c1"># https://github.com/keras-team/keras/issues/2389</span>
+
+        <span class="c1"># first value returned from generator is the number of steps for the whole epoch</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">/</span> <span class="n">batch_size</span><span class="p">)</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="k">if</span> <span class="n">shuffle</span><span class="p">:</span>
+                <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_word_seq</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span>
+                <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span>
+
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+                <span class="n">encoder_input_data</span><span class="p">,</span> <span class="n">decoder_input_data</span><span class="p">,</span> <span class="n">decoder_target_data</span> <span class="o">=</span> <span class="n">Translator</span><span class="o">.</span><span class="n">encode_sequences</span><span class="p">(</span>
+                    <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                    <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_max_seq_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_input</span>
+                <span class="p">)</span>
+
+                <span class="k">yield</span> <span class="p">[</span><span class="n">encoder_input_data</span><span class="p">,</span> <span class="n">decoder_input_data</span><span class="p">],</span> <span class="n">decoder_target_data</span>
+
+                <span class="n">i</span> <span class="o">+=</span> <span class="n">batch_size</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">infinite</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_training_data_bucketing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bucket_range</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates generator for keras fit_generator. First yielded value is number of steps needed for whole epoch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            infinite: whether to yield data infinitely or stop after one walkthrough the dataset</span>
+<span class="sd">            shuffle: whether to shuffle the training data and return them in random order every epoch</span>
+<span class="sd">            bucket_range: range of each bucket</span>
+
+<span class="sd">        Returns: First yielded value is number of steps needed for whole epoch.</span>
+<span class="sd">            Then yields ([encoder_input_data, decoder_input_data], decoder_target_data)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># shuffling</span>
+        <span class="c1"># https://stackoverflow.com/questions/46570172/how-to-fit-generator-in-keras</span>
+        <span class="c1"># https://github.com/keras-team/keras/issues/2389</span>
+
+        <span class="c1"># first value returned from generator is the number of steps for the whole epoch</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">buckets</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">split_to_buckets</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_word_seq</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">,</span>
+                                         <span class="n">bucket_range</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">x_max_seq_len</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span><span class="p">,</span>
+                                         <span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># create indices to access each bucket and then each batch inside that bucket</span>
+        <span class="k">for</span> <span class="n">bucket</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">buckets</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">bucket_indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">]),</span> <span class="n">batch_size</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">bucket_indices</span><span class="p">:</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">bucket</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="k">if</span> <span class="n">shuffle</span><span class="p">:</span>
+                <span class="c1"># we need as much random shufflin as possible</span>
+                <span class="c1"># so we shuffle both data inside buckets and then the order in which they are accessed</span>
+
+                <span class="c1"># shuffle all data inside the buckets</span>
+                <span class="k">for</span> <span class="n">bucket</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">buckets</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                    <span class="n">zipped</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">],</span> <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">]))</span>
+                    <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">zipped</span><span class="p">)</span>
+                    <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">],</span> <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">zipped</span><span class="p">)</span>
+
+                <span class="c1"># shuffle the global bucket-&gt;batch indices</span>
+                <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">bucket_ix</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                <span class="n">training_data</span> <span class="o">=</span> <span class="n">Translator</span><span class="o">.</span><span class="n">encode_sequences</span><span class="p">(</span>
+                    <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                    <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                    <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">],</span>
+                    <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_input</span>
+                <span class="p">)</span>
+                <span class="k">yield</span> <span class="p">[</span><span class="n">training_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">training_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">training_data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">infinite</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_get_test_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_encoded_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="p">,</span> <span class="n">from_index</span><span class="p">,</span> <span class="n">to_index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_test_data_gen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        # vocabularies of test dataset has to be the same as of training set</span>
+<span class="sd">        # otherwise embeddings would not correspond are use OOV</span>
+<span class="sd">        # and y one hot encodings wouldnt correspond either</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            infinite: whether to run infinitely or just do one loop over the dataset</span>
+
+<span class="sd">        Yields: x inputs, y inputs</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">once_through</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">while</span> <span class="n">infinite</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">once_through</span><span class="p">:</span>
+            <span class="n">test_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_test_data</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">)</span>
+
+            <span class="k">yield</span> <span class="p">(</span>
+                <span class="p">[</span><span class="n">test_data</span><span class="p">[</span><span class="s2">&quot;encoder_input_data&quot;</span><span class="p">],</span> <span class="n">test_data</span><span class="p">[</span><span class="s2">&quot;decoder_input_data&quot;</span><span class="p">]],</span>
+                <span class="n">test_data</span><span class="p">[</span><span class="s2">&quot;decoder_target_data&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">batch_size</span>
+
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">num_samples</span><span class="p">:</span>
+                <span class="n">once_through</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Translator.encode_sequences"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.encode_sequences">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">encode_sequences</span><span class="p">(</span><span class="n">x_word_seq</span><span class="p">,</span> <span class="n">y_word_seq</span><span class="p">,</span> <span class="n">x_max_seq_len</span><span class="p">,</span> <span class="n">y_max_seq_len</span><span class="p">,</span>
+                         <span class="n">source_vocab</span><span class="p">,</span> <span class="n">target_vocab</span><span class="p">,</span> <span class="n">reverse_input</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Take word sequences and convert them so that the model can be fit with them.</span>
+<span class="sd">        Input words are just converted to integer index</span>
+<span class="sd">        Target words are encoded to one hot vectors of target vocabulary length</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x_word_seq: input word sequences</span>
+<span class="sd">            y_word_seq: target word sequences</span>
+<span class="sd">            x_max_seq_len (int): max lengh of input word sequences</span>
+<span class="sd">            y_max_seq_len (int): max lengh of target word sequences</span>
+<span class="sd">            source_vocab (Vocabulary): source vocabulary object</span>
+<span class="sd">            target_vocab (Vocabulary): target vocabulary object</span>
+<span class="sd">            reverse_input (bool): whether to reverse input sequences</span>
+
+<span class="sd">        Returns: encoder_input_data, decoder_input_data, decoder_target_data</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># if we try to allocate memory for whole dataset (even for not a big one), Memory Error is raised</span>
+        <span class="c1"># always encode only a part of the dataset</span>
+        <span class="n">encoder_input_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_word_seq</span><span class="p">),</span> <span class="n">x_max_seq_len</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+        <span class="n">decoder_input_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_word_seq</span><span class="p">),</span> <span class="n">y_max_seq_len</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+        <span class="c1"># - 1 because decder_input doesn&#39;t take last EOS and decoder_target doesn&#39;t take first GO symbol</span>
+        <span class="n">decoder_target_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_word_seq</span><span class="p">),</span> <span class="n">y_max_seq_len</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">target_vocab</span><span class="o">.</span><span class="n">vocab_len</span><span class="p">),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+
+        <span class="c1"># prepare source sentences for embedding layer (encode to indexes)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x_word_seq</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">reverse_input</span><span class="p">:</span>  <span class="c1"># for better results according to paper Sequence to seq...</span>
+                <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">source_vocab</span><span class="o">.</span><span class="n">word_to_ix</span><span class="p">:</span>
+                    <span class="n">encoder_input_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_vocab</span><span class="o">.</span><span class="n">word_to_ix</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">encoder_input_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">UNK_IX</span>
+
+        <span class="c1"># encode target sentences to one hot encoding</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y_word_seq</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">target_vocab</span><span class="o">.</span><span class="n">word_to_ix</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="n">target_vocab</span><span class="o">.</span><span class="n">word_to_ix</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">UNK_IX</span>
+                <span class="c1"># decoder_target_data is ahead of decoder_input_data by one timestep</span>
+                <span class="c1"># ignore EOS symbol at the end</span>
+                <span class="k">if</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">decoder_input_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+
+                <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># decoder_target_data will be ahead by one timestep</span>
+                    <span class="c1"># and will not include the start character.</span>
+                    <span class="n">decoder_target_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">encoder_input_data</span><span class="p">,</span> <span class="n">decoder_input_data</span><span class="p">,</span> <span class="n">decoder_target_data</span></div>
+
+    <span class="k">def</span> <span class="nf">_define_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Defines main model for learning, encoder_model for prediction of encoder state in inference time</span>
+<span class="sd">        and decoder_model for predicting of results in inference time</span>
+
+<span class="sd">        Returns: model, encoder_model, decoder_model</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># model based on https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating models...&quot;</span><span class="p">)</span>
+        <span class="c1"># Define an input sequence and process it.</span>
+        <span class="n">encoder_inputs</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;encoder_input&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_weights</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_weights</span><span class="p">]</span>  <span class="c1"># Embedding layer wantes list as parameter</span>
+
+        <span class="c1"># according to https://keras.io/layers/embeddings/</span>
+        <span class="c1"># input dim should be +1 when used with mask_zero..is it correctly set here?</span>
+        <span class="c1"># i think that input dim is already +1 because padding symbol is part of the vocabulary</span>
+        <span class="n">source_embeddings</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="o">.</span><span class="n">vocab_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_dim</span><span class="p">,</span>
+                                      <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source_embedding_weights</span><span class="p">,</span> <span class="n">mask_zero</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                      <span class="n">name</span><span class="o">=</span><span class="s2">&quot;input_embeddings&quot;</span><span class="p">)</span>
+        <span class="n">source_embedding_outputs</span> <span class="o">=</span> <span class="n">source_embeddings</span><span class="p">(</span><span class="n">encoder_inputs</span><span class="p">)</span>
+
+        <span class="c1"># use bi-directional encoder with concatenation as in Google neural machine translation paper</span>
+        <span class="c1"># https://stackoverflow.com/questions/47923370/keras-bidirectional-lstm-seq2seq</span>
+        <span class="c1"># TODO concatenation would require decoder to be twice encoder size (because decoder is initialized with states from encoder), using avg instead - IS IT OK?</span>
+        <span class="c1"># only first layer is bidirectional (too much params if all of them were)</span>
+        <span class="c1"># its OK to have return_sequences here as encoder outputs are not used anyway in the decoder and it is needed for multi layer encoder</span>
+        <span class="n">bidirectional_encoder</span> <span class="o">=</span> <span class="n">Bidirectional</span><span class="p">(</span><span class="n">LSTM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,</span> <span class="n">return_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                                              <span class="n">name</span><span class="o">=</span><span class="s2">&quot;bidirectional_encoder_layer&quot;</span><span class="p">)</span>
+        <span class="c1"># h is inner(output) state, c i memory cell</span>
+        <span class="n">encoder_outputs</span><span class="p">,</span> <span class="n">forward_h</span><span class="p">,</span> <span class="n">forward_c</span><span class="p">,</span> <span class="n">backward_h</span><span class="p">,</span> <span class="n">backward_c</span> <span class="o">=</span> <span class="n">bidirectional_encoder</span><span class="p">(</span><span class="n">source_embedding_outputs</span><span class="p">)</span>
+        <span class="n">state_h</span> <span class="o">=</span> <span class="n">Average</span><span class="p">()([</span><span class="n">forward_h</span><span class="p">,</span> <span class="n">backward_h</span><span class="p">])</span>
+        <span class="n">state_c</span> <span class="o">=</span> <span class="n">Average</span><span class="p">()([</span><span class="n">forward_c</span><span class="p">,</span> <span class="n">backward_c</span><span class="p">])</span>
+
+        <span class="c1"># multiple encoder layers</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_encoder_layers</span><span class="p">):</span>
+            <span class="c1"># dropout around lstm layers as in paper Recurrent neural network regularization</span>
+            <span class="c1"># TODO find the correct dropout value</span>
+            <span class="c1"># source_embedding_outputs = Dropout(self.dropout)(source_embedding_outputs)</span>
+            <span class="c1"># muzu se inspirovat tady https://github.com/farizrahman4u/seq2seq/blob/master/seq2seq/models.py</span>
+            <span class="n">encoder_outputs</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">)(</span><span class="n">encoder_outputs</span><span class="p">)</span>
+            <span class="n">encoder_outputs</span><span class="p">,</span> <span class="n">state_h</span><span class="p">,</span> <span class="n">state_c</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,</span> <span class="n">return_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                     <span class="n">name</span><span class="o">=</span><span class="s2">&quot;encoder_layer_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))(</span><span class="n">encoder_outputs</span><span class="p">)</span>
+
+        <span class="c1"># We discard `encoder_outputs` and only keep the states.</span>
+        <span class="n">encoder_states</span> <span class="o">=</span> <span class="p">[</span><span class="n">state_h</span><span class="p">,</span> <span class="n">state_c</span><span class="p">]</span>
+
+        <span class="c1"># Set up the decoder, using `encoder_states` as initial state.</span>
+        <span class="n">decoder_inputs</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_input&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_weights</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_weights</span><span class="p">]</span>  <span class="c1"># Embedding layer wantes list as parameter</span>
+        <span class="n">target_embeddings</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="o">.</span><span class="n">vocab_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_dim</span><span class="p">,</span>
+                                      <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">target_embedding_weights</span><span class="p">,</span> <span class="n">mask_zero</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                      <span class="n">name</span><span class="o">=</span><span class="s2">&quot;target_embeddings&quot;</span><span class="p">)</span>
+        <span class="n">target_embedding_outputs</span> <span class="o">=</span> <span class="n">target_embeddings</span><span class="p">(</span><span class="n">decoder_inputs</span><span class="p">)</span>
+
+        <span class="c1"># We set up our decoder to return full output sequences,</span>
+        <span class="c1"># and to return internal states as well. We don&#39;t use the</span>
+        <span class="c1"># return states in the training model, but we will use them in inference.</span>
+        <span class="n">decoder_lstm</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_layer_1&quot;</span><span class="p">)</span>
+        <span class="n">decoder_outputs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">decoder_lstm</span><span class="p">(</span><span class="n">target_embedding_outputs</span><span class="p">,</span>
+                                             <span class="n">initial_state</span><span class="o">=</span><span class="n">encoder_states</span><span class="p">)</span>
+
+        <span class="c1"># multiple decoder layers</span>
+        <span class="n">decoder_layers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_decoder_layers</span><span class="p">):</span>
+            <span class="n">decoder_outputs</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">)(</span><span class="n">decoder_outputs</span><span class="p">)</span>
+            <span class="n">decoder_layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LSTM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,</span> <span class="n">return_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                       <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_layer_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+            <span class="c1"># in the learning model, initial state of all decoder layers is encoder_states</span>
+            <span class="n">decoder_outputs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">decoder_layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">](</span><span class="n">decoder_outputs</span><span class="p">,</span> <span class="n">initial_state</span><span class="o">=</span><span class="n">encoder_states</span><span class="p">)</span>
+
+        <span class="n">decoder_dense</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="o">.</span><span class="n">vocab_len</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;softmax&#39;</span><span class="p">,</span>
+                              <span class="n">name</span><span class="o">=</span><span class="s2">&quot;output_layer&quot;</span><span class="p">)</span>
+        <span class="n">decoder_outputs</span> <span class="o">=</span> <span class="n">decoder_dense</span><span class="p">(</span><span class="n">decoder_outputs</span><span class="p">)</span>
+
+        <span class="c1"># Define the model that will turn</span>
+        <span class="c1"># `encoder_input_data` &amp; `decoder_input_data` into `decoder_target_data`</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">([</span><span class="n">encoder_inputs</span><span class="p">,</span> <span class="n">decoder_inputs</span><span class="p">],</span> <span class="n">decoder_outputs</span><span class="p">)</span>
+
+        <span class="c1"># Next: inference mode (sampling).</span>
+        <span class="c1"># Here&#39;s the drill:</span>
+        <span class="c1"># 1) encode input and retrieve initial decoder state</span>
+        <span class="c1"># 2) run one step of decoder with this initial state</span>
+        <span class="c1"># and a &quot;start of sequence&quot; token as target.</span>
+        <span class="c1"># Output will be the next target token</span>
+        <span class="c1"># 3) Repeat with the current target token and current states</span>
+
+        <span class="c1"># Define sampling models</span>
+        <span class="n">encoder_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">encoder_inputs</span><span class="p">,</span> <span class="n">encoder_states</span><span class="p">)</span>
+
+        <span class="n">decoder_state_input_h</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_state_h_input&quot;</span><span class="p">)</span>
+        <span class="n">decoder_state_input_c</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_state_c_input&quot;</span><span class="p">)</span>
+        <span class="n">decoder_states_inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">decoder_state_input_h</span><span class="p">,</span> <span class="n">decoder_state_input_c</span><span class="p">]</span>
+        <span class="n">decoder_outputs</span><span class="p">,</span> <span class="n">state_h</span><span class="p">,</span> <span class="n">state_c</span> <span class="o">=</span> <span class="n">decoder_lstm</span><span class="p">(</span>
+            <span class="n">target_embedding_outputs</span><span class="p">,</span> <span class="n">initial_state</span><span class="o">=</span><span class="n">decoder_states_inputs</span><span class="p">)</span>
+        <span class="n">decoder_states</span> <span class="o">=</span> <span class="p">[</span><span class="n">state_h</span><span class="p">,</span> <span class="n">state_c</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">decoder_layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">decoder_layers</span><span class="p">):</span>
+            <span class="c1"># every layer has to have its own inputs and outputs, because each outputs different state after first token</span>
+            <span class="c1"># at the start all of the layers are initialized with encoder states</span>
+            <span class="c1"># but then, during inference, each layer has different state and it has to be initialized with it</span>
+            <span class="n">decoder_state_input_h</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_state_h_input_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="n">decoder_state_input_c</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_units</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;decoder_state_c_input_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="n">decoder_states_inputs</span> <span class="o">+=</span> <span class="p">[</span><span class="n">decoder_state_input_h</span><span class="p">,</span> <span class="n">decoder_state_input_c</span><span class="p">]</span>
+
+            <span class="n">decoder_outputs</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">)(</span><span class="n">decoder_outputs</span><span class="p">)</span>
+            <span class="n">decoder_outputs</span><span class="p">,</span> <span class="n">state_h</span><span class="p">,</span> <span class="n">state_c</span> <span class="o">=</span> <span class="n">decoder_layer</span><span class="p">(</span><span class="n">decoder_outputs</span><span class="p">,</span>
+                                                              <span class="n">initial_state</span><span class="o">=</span><span class="n">decoder_states_inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span>
+            <span class="n">decoder_states</span> <span class="o">+=</span> <span class="p">[</span><span class="n">state_h</span><span class="p">,</span> <span class="n">state_c</span><span class="p">]</span>
+
+        <span class="n">decoder_outputs</span> <span class="o">=</span> <span class="n">decoder_dense</span><span class="p">(</span><span class="n">decoder_outputs</span><span class="p">)</span>
+        <span class="n">decoder_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">decoder_inputs</span><span class="p">]</span> <span class="o">+</span> <span class="n">decoder_states_inputs</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">decoder_outputs</span><span class="p">]</span> <span class="o">+</span> <span class="n">decoder_states</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">encoder_model</span><span class="p">,</span> <span class="n">decoder_model</span>
+
+<div class="viewcode-block" id="Translator.decode_encoded_seq"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.decode_encoded_seq">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">decode_encoded_seq</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">one_hot</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">decoded</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">one_hot</span><span class="p">:</span>
+                <span class="n">ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">ix</span><span class="p">)</span>
+            <span class="n">decoded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">ix_to_word</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">decoded</span></div>
+
+<div class="viewcode-block" id="Translator.translate_sequence"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.translate_sequence">[docs]</a>    <span class="k">def</span> <span class="nf">translate_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_seq</span><span class="p">):</span>
+        <span class="c1"># Encode the input as state vectors.</span>
+        <span class="n">states_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">input_seq</span><span class="p">)</span>
+
+        <span class="c1"># at the begining, all decoder layers are initialized with the same encoder states</span>
+        <span class="n">states_value</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_decoder_layers</span>
+
+        <span class="c1"># Generate empty target sequence of length 1.</span>
+        <span class="n">target_seq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="c1"># Populate the first character of target sequence with the start character.</span>
+        <span class="n">target_seq</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">GO_IX</span>
+
+        <span class="c1"># Sampling loop for a batch of sequences</span>
+        <span class="c1"># (to simplify, here we assume a batch of size 1). # TODO ? can the batch size be bigger?</span>
+        <span class="n">decoded_sentence</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">target_seq</span><span class="p">]</span> <span class="o">+</span> <span class="n">states_value</span><span class="p">)</span>
+
+            <span class="n">output_tokens</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Sample a token</span>
+            <span class="n">sampled_token_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">output_tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">sampled_word</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="o">.</span><span class="n">ix_to_word</span><span class="p">[</span><span class="n">sampled_token_index</span><span class="p">]</span>
+
+            <span class="c1"># Exit condition: either hit max length</span>
+            <span class="c1"># or find stop character.</span>
+            <span class="k">if</span> <span class="n">sampled_word</span> <span class="o">==</span> <span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">EOS</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">decoded_sentence</span> <span class="o">+=</span> <span class="n">sampled_word</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span>
+            <span class="n">decoded_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">decoded_sentence</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">decoded_len</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span> \
+                    <span class="ow">and</span> <span class="n">decoded_len</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span><span class="p">:</span>  <span class="c1"># TODO maybe change to arbitrary long?</span>
+                <span class="k">break</span>
+
+            <span class="c1"># Update the target sequence (of length 1).</span>
+            <span class="n">target_seq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">target_seq</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">sampled_token_index</span>
+
+            <span class="c1"># Update states</span>
+            <span class="n">states_value</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="c1"># for BPE encoded</span>
+        <span class="c1"># decoded_sentence = re.sub(r&quot;(@@ )|(@@ ?$)&quot;, &quot;&quot;, decoded_sentence)</span>
+
+        <span class="k">return</span> <span class="n">decoded_sentence</span></div>
+
+<div class="viewcode-block" id="Translator.translate_sequence_beam"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.translate_sequence_beam">[docs]</a>    <span class="k">def</span> <span class="nf">translate_sequence_beam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_seq</span><span class="p">,</span> <span class="n">beam_size</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># https://machinelearningmastery.com/beam-search-decoder-natural-language-processing/</span>
+        <span class="c1"># Encode the input as state vectors.</span>
+        <span class="n">states_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">input_seq</span><span class="p">)</span>
+
+        <span class="c1"># at the begining, all decoder layers are initialized with the same encoder states</span>
+        <span class="n">states_value</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_decoder_layers</span>
+
+        <span class="c1"># only one candidate at the begining</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Candidate</span><span class="p">(</span><span class="n">last_prediction</span><span class="o">=</span><span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">GO_IX</span><span class="p">,</span> <span class="n">states_value</span><span class="o">=</span><span class="n">states_value</span><span class="p">,</span> <span class="n">score</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">decoded_sentence</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">should_stop</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">new_candidates</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">candidate</span><span class="o">.</span><span class="n">finalised</span><span class="p">:</span>
+                    <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">candidate</span><span class="o">.</span><span class="n">last_prediction</span><span class="p">]</span> <span class="o">+</span> <span class="n">candidate</span><span class="o">.</span><span class="n">states_value</span><span class="p">)</span>
+                    <span class="n">should_stop</span> <span class="o">=</span> <span class="kc">False</span>
+
+                    <span class="n">output_tokens</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">output_tokens</span> <span class="o">=</span> <span class="n">output_tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+
+                    <span class="n">states_value</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+                    <span class="c1"># find n (beam_size) best predictions</span>
+                    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argpartition</span><span class="p">(</span><span class="n">output_tokens</span><span class="p">,</span> <span class="o">-</span><span class="n">beam_size</span><span class="p">)[</span><span class="o">-</span><span class="n">beam_size</span><span class="p">:]</span>
+
+                    <span class="k">for</span> <span class="n">sampled_token_index</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                        <span class="n">score</span> <span class="o">=</span> <span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">output_tokens</span><span class="p">[</span><span class="n">sampled_token_index</span><span class="p">])</span>
+                        <span class="c1"># how long is the sentence, to compute average score</span>
+                        <span class="n">step</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">get_sentence_length</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+                        <span class="c1"># i believe scores should be summed together because log prob is used https://stats.stackexchange.com/questions/121257/log-probability-vs-product-of-probabilities</span>
+                        <span class="c1"># score is average of all probabilities (normalization so that longer sequences are not penalized)</span>
+                        <span class="c1"># incremental average https://math.stackexchange.com/questions/106700/incremental-averageing</span>
+                        <span class="n">avg_score</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">incremental_average</span><span class="p">(</span><span class="n">candidate</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">score</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+
+                        <span class="n">sampled_word</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_vocab</span><span class="o">.</span><span class="n">ix_to_word</span><span class="p">[</span><span class="n">sampled_token_index</span><span class="p">]</span>
+
+                        <span class="n">new_candidate</span> <span class="o">=</span> <span class="n">Candidate</span><span class="p">(</span><span class="n">states_value</span><span class="o">=</span><span class="n">states_value</span><span class="p">,</span>
+                                                  <span class="n">decoded_sentence</span><span class="o">=</span><span class="n">candidate</span><span class="o">.</span><span class="n">decoded_sentence</span><span class="p">,</span>
+                                                  <span class="n">score</span><span class="o">=</span><span class="n">avg_score</span><span class="p">,</span>
+                                                  <span class="n">sampled_word</span><span class="o">=</span><span class="n">sampled_word</span><span class="p">,</span> <span class="n">last_prediction</span><span class="o">=</span><span class="n">sampled_token_index</span><span class="p">)</span>
+                        <span class="n">new_candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_candidate</span><span class="p">)</span>
+
+                        <span class="c1"># Exit condition: either hit max length</span>
+                        <span class="c1"># or find stop character.</span>
+                        <span class="k">if</span> <span class="n">sampled_word</span> <span class="o">==</span> <span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">EOS</span><span class="p">:</span>
+                            <span class="k">continue</span>
+
+                        <span class="n">decoded_len</span> <span class="o">=</span> <span class="n">new_candidate</span><span class="o">.</span><span class="n">get_sentence_length</span><span class="p">()</span>
+
+                        <span class="k">if</span> <span class="n">decoded_len</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span> \
+                                <span class="ow">and</span> <span class="n">decoded_len</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">y_max_seq_len</span><span class="p">:</span>  <span class="c1"># TODO maybe change to arbitrary long?</span>
+                            <span class="n">new_candidate</span><span class="o">.</span><span class="n">finalise</span><span class="p">()</span>
+                            <span class="k">continue</span>
+
+                <span class="c1"># finished candidates are transfered to new_candidates automatically</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+
+            <span class="c1"># take n (beam_size) best candidates</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">new_candidates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">can</span><span class="p">:</span> <span class="n">can</span><span class="o">.</span><span class="n">score</span><span class="p">)[:</span><span class="n">beam_size</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">should_stop</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="k">return</span> <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decoded_sentence</span></div>
+
+<div class="viewcode-block" id="Translator.encode_text_seq_to_encoder_seq"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.encode_text_seq_to_encoder_seq">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">encode_text_seq_to_encoder_seq</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">vocab</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Encodes given text sequence to numpy array ready to be used as encoder_input for prediction</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            text (str): sequence to translate</span>
+<span class="sd">            vocab (Vocabulary): vocabulary object</span>
+
+<span class="sd">        Returns: encoded sequence ready to be used as encoder_inpout for prediction</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sequences</span> <span class="o">=</span> <span class="n">text_to_word_sequence</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequences</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sequences</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">seq</span> <span class="ow">in</span> <span class="n">vocab</span><span class="o">.</span><span class="n">word_to_ix</span><span class="p">:</span>
+                <span class="n">ix</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">word_to_ix</span><span class="p">[</span><span class="n">seq</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ix</span> <span class="o">=</span> <span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">UNK_IX</span>
+            <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ix</span>
+
+        <span class="k">return</span> <span class="n">x</span></div>
+
+<div class="viewcode-block" id="Translator.get_gen_steps"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.get_gen_steps">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_gen_steps</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Returns how many steps are needed for the generator to go through the whole dataset with the batch_size</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dataset: dataset that is beeing proccessed</span>
+<span class="sd">            batch_size: size of the batch</span>
+
+<span class="sd">        Returns: number of steps for the generatorto go through whole dataset</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">/</span> <span class="n">batch_size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Translator.fit"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">initial_epoch</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">use_fit_generator</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">bucketing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bucket_range</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        fits the model, according to the parameters passed in constructor</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            epochs: Number of epochs</span>
+<span class="sd">            initial_epoch: Epoch number from which to start</span>
+<span class="sd">            batch_size: Size of one batch</span>
+<span class="sd">            validation_split (float): How big proportion of a development dataset should be used for validation during fiting</span>
+<span class="sd">            use_fit_generator: Prevent memory crash by only load part of the dataset at once each time when fitting</span>
+<span class="sd">            bucketing (bool): Whether to bucket sequences according their size to optimize padding</span>
+<span class="sd">                automatically switches use_fit_generator to True</span>
+<span class="sd">            bucket_range (int): Range of different sequence lenghts in one bucket</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">bucketing</span><span class="p">:</span>
+            <span class="n">use_fit_generator</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># logging for tensorboard</span>
+        <span class="n">tensorboard_callback</span> <span class="o">=</span> <span class="n">TensorBoard</span><span class="p">(</span><span class="n">log_dir</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_folder</span><span class="p">),</span>
+                                           <span class="n">write_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># quite SLOW LINE</span>
+        <span class="c1"># model saving after each epoch</span>
+        <span class="n">checkpoint_callback</span> <span class="o">=</span> <span class="n">ModelCheckpoint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_weights_path</span><span class="p">,</span> <span class="n">save_weights_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[</span><span class="n">tensorboard_callback</span><span class="p">,</span> <span class="n">checkpoint_callback</span><span class="p">]</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;fitting the model...&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">use_fit_generator</span><span class="p">:</span>
+            <span class="c1"># to prevent memory error, only loads parts of dataset at once</span>
+            <span class="c1"># or when using bucketing</span>
+
+            <span class="k">if</span> <span class="n">bucketing</span><span class="p">:</span>
+                <span class="n">generator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_training_data_bucketing</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                          <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bucket_range</span><span class="o">=</span><span class="n">bucket_range</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">generator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_training_data_gen</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                    <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># first returned value from the generator is number of steps for one epoch</span>
+            <span class="n">steps</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">generator</span><span class="p">)</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;traning generator will make </span><span class="si">{}</span><span class="s2"> steps&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">steps</span><span class="p">))</span>
+            <span class="c1"># TODO why is there no validation split</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit_generator</span><span class="p">(</span><span class="n">generator</span><span class="p">,</span>
+                                     <span class="n">steps_per_epoch</span><span class="o">=</span><span class="n">steps</span><span class="p">,</span>
+                                     <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+                                     <span class="n">initial_epoch</span><span class="o">=</span><span class="n">initial_epoch</span><span class="p">,</span>
+                                     <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span>
+                                     <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">training_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_training_data</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">training_data</span><span class="p">[</span><span class="s2">&quot;encoder_input_data&quot;</span><span class="p">],</span>
+                    <span class="n">training_data</span><span class="p">[</span><span class="s2">&quot;decoder_input_data&quot;</span><span class="p">]</span>
+                <span class="p">],</span>
+                <span class="n">training_data</span><span class="p">[</span><span class="s2">&quot;decoder_target_data&quot;</span><span class="p">],</span>
+                <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+                <span class="n">initial_epoch</span><span class="o">=</span><span class="n">initial_epoch</span><span class="p">,</span>
+                <span class="n">validation_split</span><span class="o">=</span><span class="n">validation_split</span><span class="p">,</span>
+                <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Translator.evaluate"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">beam_size</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        performs evaluation on test dataset along with generating translations</span>
+<span class="sd">        and calculating BLEU score for the dataset</span>
+
+<span class="sd">        Returns: Keras model.evaluate values</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;evaluating the model...&quot;</span><span class="p">)</span>
+
+        <span class="n">steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_gen_steps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;evaluation generator will make </span><span class="si">{}</span><span class="s2"> steps&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">steps</span><span class="p">))</span>
+
+        <span class="c1"># test_data_gen gets called more then steps times,</span>
+        <span class="c1"># probably because of the workers caching the values for optimization</span>
+
+        <span class="c1"># TODO is this good for something?</span>
+        <span class="c1"># eval_data = self._test_data_gen(</span>
+        <span class="c1">#     batch_size)  # cannot be generator if want to use histograms in tensorboard callback</span>
+        <span class="c1"># eval_values = self.model.evaluate_generator(eval_data,</span>
+        <span class="c1">#                                             steps=steps)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Translating test dataset for BLEU evaluation...&quot;</span><span class="p">)</span>
+        <span class="n">path_original</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset_path</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_lang</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">path_original</span> <span class="o">+</span> <span class="s2">&quot;.translated&quot;</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_data_gen</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">infinite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">translating </span><span class="si">{}</span><span class="s2"> seq out of </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">num_samples</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">step</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">encoder_input_data</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_input_data</span><span class="p">)):</span>
+                    <span class="c1"># we need to keep the item in array ([i: i + 1])</span>
+                    <span class="n">decoded_sentence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_sequence_beam</span><span class="p">(</span><span class="n">encoder_input_data</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">beam_size</span><span class="p">)</span>
+
+                    <span class="n">out_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">decoded_sentence</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">get_bleu</span><span class="p">(</span><span class="n">path_original</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span></div>
+
+        <span class="c1"># return eval_values</span>
+
+<div class="viewcode-block" id="Translator.translate"><a class="viewcode-back" href="../../nmt.html#nmt.translator.Translator.translate">[docs]</a>    <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expected_seq</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">beam_size</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Translates given sequence</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            seq: sequence that will be translated from source to target language.</span>
+<span class="sd">            expected_seq: optional, expected result of translation</span>
+<span class="sd">            beam_size: how many candidate resulsts should be used during inference of the translated sequence for the beam search algorythm</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">encoded_seq</span> <span class="o">=</span> <span class="n">Translator</span><span class="o">.</span><span class="n">encode_text_seq_to_encoder_seq</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_vocab</span><span class="p">)</span>
+
+        <span class="n">decoded_sentence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translate_sequence_beam</span><span class="p">(</span><span class="n">encoded_seq</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Input sequence: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Expcected sentence: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">expected_seq</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Translated sentence: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">decoded_sentence</span><span class="p">))</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Jonas Holcner.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

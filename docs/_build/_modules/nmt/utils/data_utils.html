@@ -1,0 +1,419 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>nmt.utils.data_utils &#8212; nmt 1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for nmt.utils.data_utils</h1><div class="highlight"><pre>
+<span></span><span class="c1"># coding: utf-8</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">gensim.models</span> <span class="k">import</span> <span class="n">KeyedVectors</span>
+<span class="kn">from</span> <span class="nn">keras.preprocessing.text</span> <span class="k">import</span> <span class="n">text_to_word_sequence</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="k">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">from</span> <span class="nn">gensim.models.wrappers</span> <span class="k">import</span> <span class="n">FastText</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="prepare_folder"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.prepare_folder">[docs]</a><span class="k">def</span> <span class="nf">prepare_folder</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">clear</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path (str): path to the folder</span>
+<span class="sd">        clear (bool): whether to clear the folder if it already exists</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;preparing folder </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">clear</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;deleting folder </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;problem with creating folder </span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+            <span class="k">raise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;folder </span><span class="si">{}</span><span class="s2"> already exists&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="prepare_folders"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.prepare_folders">[docs]</a><span class="k">def</span> <span class="nf">prepare_folders</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">clear</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        paths (str[]): list of paths to the folders</span>
+<span class="sd">        clear (bool): whether to clear the folders if they already exists</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+        <span class="n">prepare_folder</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">clear</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="read_file_to_lines"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.read_file_to_lines">[docs]</a><span class="k">def</span> <span class="nf">read_file_to_lines</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">max_lines</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Loads lines from a given file up to max_lines</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: path to the file</span>
+<span class="sd">        max_lines: maximum number of lines to be read from file, None means all of them</span>
+
+<span class="sd">    Returns: list of string lines read from the file</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;reading </span><span class="si">{}</span><span class="s2"> into lines...&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_handler</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">file_handler</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)[:</span><span class="n">max_lines</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">lines</span></div>
+
+
+<div class="viewcode-block" id="load_embedding_weights"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.load_embedding_weights">[docs]</a><span class="k">def</span> <span class="nf">load_embedding_weights</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Loads pretrained embedding weights from given path</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        path: Path to fast text embeddings</span>
+<span class="sd">        words: dictionary of words (e.g. {0: &quot;PAD&quot;, 1: &quot;cat&quot;, 2: &quot;dog&quot;}),</span>
+<span class="sd">            word on index 0 is considered to be PADDING and its weights are set to 0</span>
+<span class="sd">        limit: maximum number of loaded embeddings (lines)</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list of weights in the same order as are words</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;load_embedding_weights from </span><span class="si">{}</span><span class="s2"> for </span><span class="si">{}</span><span class="s2"> words&quot;</span>
+                 <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)))</span>
+
+    <span class="c1"># don&#39;t know how to limit size of vocabulary with FastText</span>
+    <span class="c1"># loading the whole model takes too much time</span>
+    <span class="c1"># TODO use FastText (.bin) for final version, because it can generate vectors for OOV words from ngrams</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">FastText</span><span class="o">.</span><span class="n">load_fasttext_format</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="c1"># model = KeyedVectors.load_word2vec_format(path, limit=limit)</span>
+
+    <span class="c1"># model.get_keras_embedding()</span>
+
+    <span class="c1"># Get dimension</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">vector_size</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;getting embedding weights for each word&quot;</span><span class="p">)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">oov_words</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Set zero weight for padding symbol</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">model</span><span class="p">:</span>
+            <span class="c1"># https://radimrehurek.com/gensim/models/wrappers/fasttext.html</span>
+            <span class="c1"># The word can be out-of-vocabulary as long as ngrams for the word are present.</span>
+            <span class="c1"># For words with all ngrams absent, a KeyError is raised.</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">model</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># logging.warning(&quot;out of vocabulary word: {}&quot;.format(word))</span>
+            <span class="n">oov_words</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># Init random weights for out of vocabulary word</span>
+            <span class="c1"># TODO are the values in range (-1, 1)?</span>
+            <span class="c1"># weight = np.random.uniform(low=-1.0, high=1.0, size=dim)</span>
+
+            <span class="c1"># TODO in final version change to fastText model</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">seeded_vector</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())</span>
+            <span class="c1"># https://www.quora.com/How-does-fastText-output-a-vector-for-a-word-that-is-not-in-the-pre-trained-model</span>
+
+        <span class="n">weights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> oov words&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">oov_words</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;weights loaded&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_bucket_ix"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.get_bucket_ix">[docs]</a><span class="k">def</span> <span class="nf">get_bucket_ix</span><span class="p">(</span><span class="n">seq_length</span><span class="p">,</span> <span class="n">bucket_range</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Returns index of a bucket for a sequence with q given length when bucket range is bucket_range</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        seq_length: lengh of sequence</span>
+<span class="sd">        bucket_range: range of bucket</span>
+
+<span class="sd">    Returns: index of a bucket</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">seq_length</span> <span class="o">//</span> <span class="n">bucket_range</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">seq_length</span> <span class="o">%</span> <span class="n">bucket_range</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="split_to_buckets"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.split_to_buckets">[docs]</a><span class="k">def</span> <span class="nf">split_to_buckets</span><span class="p">(</span><span class="n">x_sequences</span><span class="p">,</span> <span class="n">y_sequences</span><span class="p">,</span> <span class="n">bucket_range</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">x_max_len</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_max_len</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bucket_min_size</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Split list of sequences to list of buckets where each bucket is a list of word sequences</span>
+<span class="sd">    with similar length (based on the bucket_range size e.g.</span>
+<span class="sd">    with bucket_size=3 sequences with length 1-3 falls in same bucket)</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        x_sequences: one list of sequences</span>
+<span class="sd">        y_sequences: another list of sequences</span>
+<span class="sd">        bucket_range: size of one bucket (how big range of sequence lengths should fall into one bucket)</span>
+<span class="sd">        x_max_len: optional max length of X sequences</span>
+<span class="sd">        y_max_len: optional max length of y sequences</span>
+<span class="sd">        bucket_min_size: minimal size of a bucket. If its lower, than the bucket gets merged with other bucket</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        dict of buckets each with the Y and y list of similary long sequences and their max length</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;splitting sequences to buckets with range </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bucket_range</span><span class="p">))</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_sequences</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_sequences</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">x_max_len</span><span class="p">:</span>
+        <span class="n">x_max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="n">x_sequences</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">y_max_len</span><span class="p">:</span>
+        <span class="n">y_max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="n">y_sequences</span><span class="p">)</span>
+
+    <span class="n">all_max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">x_max_len</span><span class="p">,</span> <span class="n">y_max_len</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;x_max_len = </span><span class="si">{}</span><span class="s2">, y_max_len = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x_max_len</span><span class="p">,</span> <span class="n">y_max_len</span><span class="p">))</span>
+
+    <span class="n">num_buckets</span> <span class="o">=</span> <span class="n">get_bucket_ix</span><span class="p">(</span><span class="n">all_max_len</span><span class="p">,</span> <span class="n">bucket_range</span><span class="p">)</span>
+
+    <span class="n">buckets</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;max num buckets = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_buckets</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_sequences</span><span class="p">)):</span>
+        <span class="n">x_seq</span> <span class="o">=</span> <span class="n">x_sequences</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">y_seq</span> <span class="o">=</span> <span class="n">y_sequences</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">x_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_seq</span><span class="p">)</span>
+        <span class="n">y_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_seq</span><span class="p">)</span>
+
+        <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">x_len</span><span class="p">,</span> <span class="n">y_len</span><span class="p">)</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="n">get_bucket_ix</span><span class="p">(</span><span class="n">max_len</span><span class="p">,</span> <span class="n">bucket_range</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">bucket</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">buckets</span><span class="p">:</span>
+            <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;y_word_seq&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+
+        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_seq</span><span class="p">)</span>
+        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_seq</span><span class="p">)</span>
+        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">],</span> <span class="n">x_len</span><span class="p">)</span>
+        <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">],</span> <span class="n">y_len</span><span class="p">)</span>
+
+    <span class="c1"># merge buckets lower then bucket_min_size for optimization</span>
+    <span class="c1"># so we don&#39;t run fit method over really small input lists</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;bucket_min_size=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bucket_min_size</span><span class="p">))</span>
+    <span class="n">delete_ixs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">bucket_ixs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">buckets</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">merge_bucket_ix</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">bucket_ix</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bucket_ixs</span><span class="p">):</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="n">buckets</span><span class="p">[</span><span class="n">bucket_ix</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bucket</span><span class="p">[</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">bucket_min_size</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ix</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">bucket_ixs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">merge_bucket_ix</span> <span class="o">=</span> <span class="n">bucket_ixs</span><span class="p">[</span><span class="n">ix</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">ix</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># if last bucket, then it has to be merged to the lower one</span>
+                <span class="n">merge_bucket_ix</span> <span class="o">=</span> <span class="n">bucket_ixs</span><span class="p">[</span><span class="n">ix</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">merge_bucket_ix</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">merge_bucket_ix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">delete_ixs</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;bucket </span><span class="si">{}</span><span class="s2"> is too small, merging with bucket </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bucket_ix</span><span class="p">,</span> <span class="n">merge_bucket_ix</span><span class="p">))</span>
+                <span class="n">delete_ixs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bucket_ix</span><span class="p">)</span>
+
+                <span class="n">buckets</span><span class="p">[</span><span class="n">merge_bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">merge_bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">],</span>
+                                                                <span class="n">bucket</span><span class="p">[</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">])</span>
+                <span class="n">buckets</span><span class="p">[</span><span class="n">merge_bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">merge_bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">],</span>
+                                                                <span class="n">bucket</span><span class="p">[</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">])</span>
+                <span class="n">buckets</span><span class="p">[</span><span class="n">merge_bucket_ix</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">bucket</span><span class="p">[</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">]</span>
+                <span class="n">buckets</span><span class="p">[</span><span class="n">merge_bucket_ix</span><span class="p">][</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">bucket</span><span class="p">[</span><span class="s2">&quot;y_word_seq&quot;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="n">delete_ixs</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">buckets</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;created </span><span class="si">{}</span><span class="s2"> buckets&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">buckets</span><span class="p">)))</span>
+    <span class="k">for</span> <span class="n">bucket</span> <span class="ow">in</span> <span class="n">buckets</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;bucket </span><span class="si">{}</span><span class="s2"> with xmaxlen </span><span class="si">{}</span><span class="s2">, ymaxlen </span><span class="si">{}</span><span class="s2"> has </span><span class="si">{}</span><span class="s2"> sequences&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">bucket</span><span class="p">,</span> <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_max_seq_len&quot;</span><span class="p">],</span> <span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;y_max_seq_len&quot;</span><span class="p">],</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">buckets</span><span class="p">[</span><span class="n">bucket</span><span class="p">][</span><span class="s2">&quot;x_word_seq&quot;</span><span class="p">]))</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">buckets</span></div>
+
+
+<div class="viewcode-block" id="tokenize"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.tokenize">[docs]</a><span class="k">def</span> <span class="nf">tokenize</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Tokenizes lines using keras&#39;s text_to_word_sequence</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lines (str[]): array of lines</span>
+
+<span class="sd">    Returns: list of splitted word sequences</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;tokenizing lines...&quot;</span><span class="p">)</span>
+    <span class="c1"># TODO use tokenization from Moses so its same as for Moses baseline model</span>
+    <span class="n">word_seq</span> <span class="o">=</span> <span class="p">[</span><span class="n">text_to_word_sequence</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">word_seq</span></div>
+
+
+<div class="viewcode-block" id="split_lines"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.split_lines">[docs]</a><span class="k">def</span> <span class="nf">split_lines</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Splits each line on &#39; &#39; character</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lines (str[]): array of lines</span>
+
+<span class="sd">    Returns: returns array of splitted sequences</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">word_seq</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="n">splitted</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+        <span class="c1"># skip empty lines</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">splitted</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">word_seq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">splitted</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">word_seq</span></div>
+
+
+<div class="viewcode-block" id="convert_xmlset_to_text"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.convert_xmlset_to_text">[docs]</a><span class="k">def</span> <span class="nf">convert_xmlset_to_text</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Converts data sets in xml (sgm) (e.g. http://www.statmt.org/wmt17/translation-task.html Development and Test sets</span>
+<span class="sd">    to text only format (one line, one sequence).</span>
+<span class="sd">    Creates new file with same name and .lines extension</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: path to the file</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;xml&quot;</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;.lines&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f_out</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;doc&quot;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;seg&quot;</span><span class="p">):</span>
+                <span class="n">f_out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">text</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                        <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="c1">#     weights = load_embedding_weights(&quot;G:/Clouds/DPbigFiles/facebookVectors/facebookPretrained-wiki.cs.vec&quot;,</span>
+    <span class="c1">#                            {0:&quot;PAD&quot;, 1:&quot;kostka&quot;, 2:&quot;pes&quot;, 3:&quot;UNK&quot;}, limit=1000)</span>
+
+    <span class="c1"># x_word_seq = [</span>
+    <span class="c1">#     [&quot;1&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;]</span>
+    <span class="c1"># ]</span>
+    <span class="c1">#</span>
+    <span class="c1"># y_word_seq = [</span>
+    <span class="c1">#     [&quot;1&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;],</span>
+    <span class="c1">#     [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;]</span>
+    <span class="c1"># ]</span>
+    <span class="c1"># buckets = split_to_buckets(x_word_seq, y_word_seq, 2, bucket_min_size=2)</span>
+    <span class="c1">#</span>
+    <span class="c1"># for bucket in buckets:</span>
+    <span class="c1">#     print(bucket, buckets[bucket])</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Jonas Holcner.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
