@@ -333,8 +333,7 @@ def test_training_data_gen_bucketing():
                             source_lang="cs", target_lang="en", log_folder="logs",
                             model_folder="data", model_file="model.h5")
     generator = translator._training_data_bucketing(batch_size=2, infinite=True,
-                                                    shuffle=False, bucketing=True,
-                                                    bucket_range=1)
+                                                    shuffle=False, bucket_range=1)
 
     # to remove first returned value
     steps = next(generator)

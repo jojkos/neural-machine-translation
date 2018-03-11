@@ -7,7 +7,18 @@ logger = logging.getLogger(__name__)
 
 
 class Vocabulary(object):
+    """
+        Vocabulary used in Dataset class, handles all the tokens that are used for each language
+    """
+
     def __init__(self, word_seq, max_vocab_size):
+        """
+
+        Args:
+            word_seq (:obj:`list` of :obj:`str`):
+            max_vocab_size: maximum size of the vocabulary, rest will be OOV
+        """
+
         # Creating the vocabulary set with the most common words
 
         # cannot use keras tokenizer, because we need to add our SpecialSymbols in the vocabuly and keras don't do that
@@ -49,7 +60,25 @@ class Vocabulary(object):
         return vocab
 
     def get_word(self, ix):
+        """
+
+        Args:
+            ix (int): index in the vocabulary
+
+        Returns:
+             str: word from vocabulary on index ix
+
+        """
         return self.ix_to_word[ix]
 
     def get_index(self, word):
+        """
+
+        Args:
+            word (str): word in the vocabulary
+
+        Returns:
+             int: index of the word in the vocabulary
+
+        """
         return self.word_to_ix[word]

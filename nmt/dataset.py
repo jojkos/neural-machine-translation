@@ -15,11 +15,11 @@ class Dataset(object):
         """
 
         Args:
-            dataset_path (str):
-            source_lang (str):
-            target_lang (str):
-            num_samples (int):
-            tokenize (bool):
+            dataset_path (str): path to the dataset
+            source_lang (str): source language code (extension of the dataset file)
+            target_lang (str): target language code (extension of the dataset file)
+            num_samples (int): how many lines from the file should be read
+            tokenize (bool): whether the words should be tokenized
         """
         self.dataset_path = dataset_path
         self.source_lang = source_lang
@@ -40,7 +40,7 @@ class Dataset(object):
         Loads both dataset files and stores them as sequences. Stores max seq lens as well.
 
         Args:
-            tokenize (bool):
+            tokenize (bool): whether the words should be tokenized
 
         """
         x_file_path = "{}.{}".format(self.dataset_path, self.source_lang)

@@ -3,10 +3,7 @@
 import logging
 import os
 import math
-import re
-import pickle
 import random
-from time import time
 
 from keras.utils.vis_utils import model_to_dot
 from keras.utils import plot_model
@@ -48,7 +45,6 @@ class Translator(object):
             target_embedding_dim (int): Dimension of embeddings
             target_embedding_path (str): Path to pretrained fastText embeddings file
             max_source_embedding_num (int): how many first lines from embedding file should be loaded, None means all of them
-            epochs (int): Number of epochs
             source_lang (str): Source language (dataset file extension)
             num_units (str): Size of each network layer
             dropout (int): Size of dropout
@@ -64,7 +60,6 @@ class Translator(object):
             target_lang (str): Target language (dataset file extension)
             test_dataset (str): Path to the test set. Dataset are two files (one source one target language)
             training_dataset (str): Path to the training set
-            validaton_split (float): How big proportion of a development dataset should be used for validation during fiting
             clear (bool): Whether to delete old weights and logs before running
             tokenize (bool): Whether to tokenize the sequences or not (they are already tokenizes e.g. using Moses tokenizer)
             num_encoder_layers (int): Number of layers in encoder
@@ -321,14 +316,13 @@ class Translator(object):
             if not infinite:
                 break
 
-    def _training_data_bucketing(self, batch_size, infinite=True, shuffle=True, bucketing=False, bucket_range=3):
+    def _training_data_bucketing(self, batch_size, infinite=True, shuffle=True, bucket_range=3):
         """
         Creates generator for keras fit_generator. First yielded value is number of steps needed for whole epoch.
 
         Args:
             infinite: whether to yield data infinitely or stop after one walkthrough the dataset
             shuffle: whether to shuffle the training data and return them in random order every epoch
-            bucketing: whetether to use bucketing
             bucket_range: range of each bucket
 
         Returns: First yielded value is number of steps needed for whole epoch.
@@ -483,6 +477,14 @@ class Translator(object):
         return encoder_input_data, decoder_input_data, decoder_target_data
 
     def _define_models(self):
+        """
+
+        Defines main model for learning, encoder_model for prediction of encoder state in inference time
+        and decoder_model for predicting of results in inference time
+
+        Returns: model, encoder_model, decoder_model
+
+        """
         # model based on https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html
         logger.info("Creating models...")
         # Define an input sequence and process it.
@@ -777,10 +779,10 @@ class Translator(object):
         fits the model, according to the parameters passed in constructor
 
         Args:
-            epochs:
-            initial_epoch:
-            batch_size:
-            validation_split:
+            epochs: Number of epochs
+            initial_epoch: Epoch number from which to start
+            batch_size: Size of one batch
+            validation_split (float): How big proportion of a development dataset should be used for validation during fiting
             use_fit_generator: Prevent memory crash by only load part of the dataset at once each time when fitting
             bucketing (bool): Whether to bucket sequences according their size to optimize padding
                 automatically switches use_fit_generator to True
@@ -807,8 +809,7 @@ class Translator(object):
 
             if bucketing:
                 generator = self._training_data_bucketing(batch_size, infinite=True,
-                                                          shuffle=True, bucketing=bucketing,
-                                                          bucket_range=bucket_range)
+                                                          shuffle=True, bucket_range=bucket_range)
             else:
                 generator = self._training_data_gen(batch_size, infinite=True,
                                                     shuffle=True)
@@ -851,9 +852,6 @@ class Translator(object):
         """
         logger.info("evaluating the model...")
 
-        # TODO probably create 4th model without decoder_input_data for evaluation?
-        # maybe not
-
         steps = self.get_gen_steps(self.test_dataset, batch_size)
         logger.info("evaluation generator will make {} steps".format(steps))
 
@@ -894,6 +892,7 @@ class Translator(object):
         Args:
             seq: sequence that will be translated from source to target language.
             expected_seq: optional, expected result of translation
+            beam_size: how many candidate resulsts should be used during inference of the translated sequence for the beam search algorythm
 
         """
 

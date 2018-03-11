@@ -11,6 +11,15 @@ class Candidate(object):
     """
 
     def __init__(self, last_prediction, decoded_sentence, states_value, score, sampled_word=None):
+        """
+
+        Args:
+            last_prediction (int): last prediction index
+            decoded_sentence (str): result sequence so far
+            states_value: values of inner state and memory cell
+            score (int): score so far
+            sampled_word (str): last sampled word
+        """
         # Generate empty target sequence of length 1.
         self.last_prediction = np.zeros((1, 1))
         # Populate the first character of target sequence with the start character.
@@ -28,8 +37,19 @@ class Candidate(object):
             self.decoded_sentence += sampled_word + " "
 
     def finalise(self):
+        """
+
+        Returns: Set the Candidate as finalised - not to be used in another predicting, the sequence is complete.
+
+        """
         self.decoded_sentence = self.decoded_sentence.strip()
         self.finalised = True
 
     def get_sentence_length(self):
+        """
+        Returns current length of the candidate sequence
+
+        Returns: current length of the candidate sequence
+
+        """
         return len(self.decoded_sentence.split(" "))
