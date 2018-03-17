@@ -198,7 +198,7 @@ def test_translating_small_dataset_multiple_layers():
                             model_folder="data", model_file="model.h5",
                             num_encoder_layers=4, num_decoder_layers=2)
 
-    translator.fit(epochs=100, bucketing=True, bucket_range=2)
+    translator.fit(epochs=130, bucketing=True, bucket_range=2)
 
     translator.evaluate()
 
