@@ -837,7 +837,7 @@ class Translator(object):
         performs evaluation on test dataset along with generating translations
         and calculating BLEU score for the dataset
 
-        Returns: Keras model.evaluate values
+        Returns (float): BLEU score
 
         """
         logger.info("evaluating the model...")
@@ -864,9 +864,9 @@ class Translator(object):
 
                     out_file.write(decoded_sentence + "\n")
         print("\n", end="\n")
-        utils.get_bleu(path_original, path)
+        bleu = utils.get_bleu(path_original, path)
 
-        # return eval_values
+        return bleu
 
     def translate(self, seq=None, expected_seq=None, beam_size=1):
         """

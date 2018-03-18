@@ -404,7 +404,7 @@ def test_define_models_multiple_layers():
     translator = Translator(training_dataset="data/small", test_dataset="data/smallTest",
                             source_lang="cs", target_lang="en", log_folder="logs",
                             model_folder="data", model_file="model.h5",
-                            num_encoder_layers=2, num_decoder_layers=2)
+                            num_encoder_layers=2, num_decoder_layers=4)
 
     model, encoder_model, decoder_model = translator._define_models()
 

@@ -31,14 +31,17 @@ def get_bleu(reference_file_path, hypothesis_file_path):
     with open(hypothesis_file_path, "r", encoding="utf-8") as hypothesis_file:
         args = ["perl", get_script_path("multi-bleu.perl"), reference_file_path]
 
-        popen = subprocess.Popen(args, stdin=hypothesis_file)  # , stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        popen = subprocess.Popen(args, stdin=hypothesis_file, stdout=subprocess.PIPE)  # , stdout=subprocess.PIPE, stderr=subprocess.PIPE
         popen.wait()
-        # output = popen.stdout.read()
-        # err_output = popen.stderr.read()
+
+        output = popen.stdout.read()
         # print("output:", output)
+        # err_output = popen.stderr.read()
         # print("error output:", err_output)
 
-        # TODO return the value instead of letting it print it
+        bleu = float(output.decode("utf-8").split()[2].strip(","))
+
+        return bleu
 
 
 def create_bpe_dataset(paths, symbols):
