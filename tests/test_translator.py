@@ -4,7 +4,6 @@ import os
 import random
 import shutil
 
-# TODO so that tests run the same way every time
 random.seed(0)
 
 
@@ -192,7 +191,6 @@ def test_translating_small_dataset_bucketing():
 
 
 def test_translating_small_dataset_multiple_layers():
-    # TODO multiple decoder layers not working properly
     translator = Translator(training_dataset="data/small", test_dataset="data/smallTest",
                             source_lang="cs", target_lang="en", log_folder="logs",
                             model_folder="data", model_file="model.h5",
@@ -423,5 +421,3 @@ def test_define_models_multiple_layers():
     assert len(decoder_model.layers) == 10
 
     assert len(encoder_model.layers) == 5
-
-    # TODO testy pro vice layeru encoder/decoder a mozna bych mel udelat test co overi ze vubec spravne vytvarim modely a maji spravnej pocet vrstev a tak

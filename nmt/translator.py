@@ -575,27 +575,22 @@ class Translator(object):
         decoder_state_input_h = Input(shape=(self.num_units,), name="decoder_state_h_input")
         decoder_state_input_c = Input(shape=(self.num_units,), name="decoder_state_c_input")
         decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
-        decoder_outputs, state_h, state_c = decoder_lstm(
+        decoder_outputs, _, _ = decoder_lstm(
             target_embedding_outputs, initial_state=decoder_states_inputs)
-        decoder_states = [state_h, state_c]
 
         for i, decoder_layer in enumerate(decoder_layers):
             # every layer has to have its own inputs and outputs, because each outputs different state after first token
             # at the start all of the layers are initialized with encoder states
-            # but then, during inference, each layer has different state and it has to be initialized with it
-            decoder_state_input_h = Input(shape=(self.num_units,), name="decoder_state_h_input_{}".format(i + 2))
-            decoder_state_input_c = Input(shape=(self.num_units,), name="decoder_state_c_input_{}".format(i + 2))
-            decoder_states_inputs += [decoder_state_input_h, decoder_state_input_c]
-
+            # in inference, whole sequence has to be used as an input (not one word after another)
+            # to get propper inner states in hidden layers
             decoder_outputs = Dropout(self.dropout)(decoder_outputs)
-            decoder_outputs, state_h, state_c = decoder_layer(decoder_outputs,
-                                                              initial_state=decoder_states_inputs[-2:])
-            decoder_states += [state_h, state_c]
+            decoder_outputs, _, _ = decoder_layer(decoder_outputs,
+                                                  initial_state=decoder_states_inputs)
 
         decoder_outputs = decoder_dense(decoder_outputs)
         decoder_model = Model(
             [decoder_inputs] + decoder_states_inputs,
-            [decoder_outputs] + decoder_states)
+            decoder_outputs)
 
         return model, encoder_model, decoder_model
 
@@ -613,25 +608,22 @@ class Translator(object):
         # Encode the input as state vectors.
         states_value = self.encoder_model.predict(input_seq)
 
-        # at the begining, all decoder layers are initialized with the same encoder states
-        states_value *= self.num_decoder_layers
-
         # Generate empty target sequence of length 1.
         target_seq = np.zeros((1, 1))
         # Populate the first character of target sequence with the start character.
         target_seq[0, 0] = SpecialSymbols.GO_IX
 
         # Sampling loop for a batch of sequences
-        # (to simplify, here we assume a batch of size 1). # TODO ? can the batch size be bigger?
         decoded_sentence = ""
         while True:
             outputs = self.decoder_model.predict(
                 [target_seq] + states_value)
 
-            output_tokens = outputs[0]
+            # outputs result for each token in sequence, we want to sample the last one
+            output_tokens = outputs[0][-1]
 
             # Sample a token
-            sampled_token_index = np.argmax(output_tokens[0, -1, :])
+            sampled_token_index = np.argmax(output_tokens)
             sampled_word = self.target_vocab.ix_to_word[sampled_token_index]
 
             # Exit condition: either hit max length
@@ -646,29 +638,29 @@ class Translator(object):
                     and decoded_len > self.test_dataset.y_max_seq_len:  # TODO maybe change to arbitrary long?
                 break
 
-            # Update the target sequence (of length 1).
-            target_seq = np.zeros((1, 1))
-            target_seq[0, 0] = sampled_token_index
+            # Update the target sequence, add last samples word.
+            new_target_token = np.zeros((1, 1))
+            new_target_token[0, 0] = sampled_token_index
 
-            # Update states
-            states_value = outputs[1:]
+            target_seq = np.hstack((target_seq, new_target_token))
 
         # for BPE encoded
         # decoded_sentence = re.sub(r"(@@ )|(@@ ?$)", "", decoded_sentence)
 
-        return decoded_sentence
+        return decoded_sentence.strip()
 
     def translate_sequence_beam(self, input_seq, beam_size=1):
         # https://machinelearningmastery.com/beam-search-decoder-natural-language-processing/
         # Encode the input as state vectors.
         states_value = self.encoder_model.predict(input_seq)
 
-        # at the begining, all decoder layers are initialized with the same encoder states
-        states_value *= self.num_decoder_layers
+        # Generate empty target sequence of length 1.
+        target_seq = np.zeros((1, 1))
 
         # only one candidate at the begining
         candidates = [
-            Candidate(last_prediction=SpecialSymbols.GO_IX, states_value=states_value, score=0, decoded_sentence="")
+            Candidate(target_seq=target_seq, last_prediction=SpecialSymbols.GO_IX, states_value=states_value, score=0,
+                      decoded_sentence="")
         ]
 
         while True:
@@ -677,13 +669,10 @@ class Translator(object):
             for candidate in candidates:
                 if not candidate.finalised:
                     outputs = self.decoder_model.predict(
-                        [candidate.last_prediction] + candidate.states_value)
+                        [candidate.target_seq] + candidate.states_value)
                     should_stop = False
 
-                    output_tokens = outputs[0]
-                    output_tokens = output_tokens[0, -1, :]
-
-                    states_value = outputs[1:]
+                    output_tokens = outputs[0][-1]
 
                     # find n (beam_size) best predictions
                     indices = np.argpartition(output_tokens, -beam_size)[-beam_size:]
@@ -700,7 +689,8 @@ class Translator(object):
 
                         sampled_word = self.target_vocab.ix_to_word[sampled_token_index]
 
-                        new_candidate = Candidate(states_value=states_value,
+                        new_candidate = Candidate(target_seq=candidate.target_seq,
+                                                  states_value=states_value,
                                                   decoded_sentence=candidate.decoded_sentence,
                                                   score=avg_score,
                                                   sampled_word=sampled_word, last_prediction=sampled_token_index)
@@ -857,12 +847,6 @@ class Translator(object):
 
         # test_data_gen gets called more then steps times,
         # probably because of the workers caching the values for optimization
-
-        # TODO is this good for something?
-        # eval_data = self._test_data_gen(
-        #     batch_size)  # cannot be generator if want to use histograms in tensorboard callback
-        # eval_values = self.model.evaluate_generator(eval_data,
-        #                                             steps=steps)
 
         logger.info("Translating test dataset for BLEU evaluation...")
         path_original = self.test_dataset_path + "." + self.target_lang

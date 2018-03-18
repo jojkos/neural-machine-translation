@@ -10,10 +10,11 @@ class Candidate(object):
         Temporary candidate or hypotheses of the translated sequence used in beam search
     """
 
-    def __init__(self, last_prediction, decoded_sentence, states_value, score, sampled_word=None):
+    def __init__(self, target_seq, last_prediction, decoded_sentence, states_value, score, sampled_word=None):
         """
 
         Args:
+            target_seq (numpy array): so far predicted indices of target seq
             last_prediction (int): last prediction index
             decoded_sentence (str): result sequence so far
             states_value: values of inner state and memory cell
@@ -24,6 +25,8 @@ class Candidate(object):
         self.last_prediction = np.zeros((1, 1))
         # Populate the first character of target sequence with the start character.
         self.last_prediction[0, 0] = last_prediction
+
+        self.target_seq = np.hstack((target_seq, self.last_prediction))
 
         self.decoded_sentence = decoded_sentence
         self.score = score  # the lower, the better

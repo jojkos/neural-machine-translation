@@ -253,7 +253,6 @@ def tokenize(lines):
 
     """
     logger.info("tokenizing lines...")
-    # TODO use tokenization from Moses so its same as for Moses baseline model
     word_seq = [text_to_word_sequence(x) for x in lines]
 
     return word_seq

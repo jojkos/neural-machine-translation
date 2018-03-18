@@ -40,7 +40,7 @@ class Vocabulary(object):
 
         self.ix_to_word = {index: word for index, word in enumerate(self.ix_to_word)}
         self.word_to_ix = {self.ix_to_word[ix]: ix for ix in self.ix_to_word}
-        # TODO how to use pretrained embedding with these custom symbols
+
         # https://github.com/fchollet/keras/issues/6480
         # https://github.com/fchollet/keras/issues/3325
         self.vocab_len = len(self.ix_to_word)
