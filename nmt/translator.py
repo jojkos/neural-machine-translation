@@ -831,24 +831,15 @@ class Translator(object):
                 callbacks=callbacks
             )
 
-    def evaluate(self, batch_size=64, beam_size=1):
+    def translate_test_data(self, batch_size=64, beam_size=1):
         """
-
-        performs evaluation on test dataset along with generating translations
-        and calculating BLEU score for the dataset
-
-        Returns (float): BLEU score
-
+        Generates translations for the test dataset, stores them in '.translated' file
         """
-        logger.info("evaluating the model...")
+        logger.info("translating the test dataset...")
 
         steps = self.get_gen_steps(self.test_dataset, batch_size)
-        logger.info("evaluation generator will make {} steps".format(steps))
+        logger.info("test generator will make {} steps".format(steps))
 
-        # test_data_gen gets called more then steps times,
-        # probably because of the workers caching the values for optimization
-
-        logger.info("Translating test dataset for BLEU evaluation...")
         path_original = self.test_dataset_path + "." + self.target_lang
         path = path_original + ".translated"
 
@@ -864,6 +855,17 @@ class Translator(object):
 
                     out_file.write(decoded_sentence + "\n")
         print("\n", end="\n")
+
+    def get_bleu_for_test_data_translation(self):
+        """
+        Return BLEU score for previously generated translation (with translate_test_data)
+
+        Returns (float): BLEU score
+
+        """
+        path_original = self.test_dataset_path + "." + self.target_lang
+        path = path_original + ".translated"
+
         bleu = utils.get_bleu(path_original, path)
 
         return bleu

@@ -135,7 +135,7 @@ def test_translating_small_dataset():
                             model_folder="data", model_file="model.h5")
 
     translator.fit(epochs=100)
-    translator.evaluate(beam_size=5)
+    translator.translate_test_data(beam_size=5)
 
     os.remove("data/model.h5")
 
@@ -155,7 +155,7 @@ def test_translating_small_dataset_use_generator():
                             model_folder="data", model_file="model.h5")
 
     translator.fit(epochs=100, use_fit_generator=True)
-    translator.evaluate()
+    translator.translate_test_data()
 
     os.remove("data/model.h5")
 
@@ -176,7 +176,7 @@ def test_translating_small_dataset_bucketing():
 
     translator.fit(epochs=100, bucketing=True, bucket_range=2)
 
-    translator.evaluate()
+    translator.translate_test_data()
 
     os.remove("data/model.h5")
 
@@ -198,7 +198,7 @@ def test_translating_small_dataset_multiple_layers():
 
     translator.fit(epochs=130, bucketing=True, bucket_range=2)
 
-    translator.evaluate()
+    translator.translate_test_data()
 
     os.remove("data/model.h5")
 
@@ -416,8 +416,8 @@ def test_define_models_multiple_layers():
     decoder_layer_1 = model.get_layer(name="decoder_layer_1")
     output_layer = model.get_layer(name="output_layer")
 
-    assert len(model.layers) == 11
+    assert len(model.layers) == 15
 
-    assert len(decoder_model.layers) == 10
+    assert len(decoder_model.layers) == 12
 
     assert len(encoder_model.layers) == 5
