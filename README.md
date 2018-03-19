@@ -30,5 +30,5 @@ TODO show how tun run the main.py
 - Can be run with `pytest tests` 
 
 ## TODOs
-- [] better decomposition
-- [] upload to PiPY
+- [ ] better decomposition
+- [ ] upload to PyPi

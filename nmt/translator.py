@@ -11,7 +11,7 @@ from keras.utils import plot_model
 import numpy as np
 import nmt.utils as utils
 from nmt import SpecialSymbols, Dataset, Vocabulary, Candidate
-from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from keras.layers import LSTM, Dense, Embedding, Input, Bidirectional, Concatenate, Average, Dropout
 from keras.models import Model
 from keras.preprocessing.text import text_to_word_sequence
@@ -384,14 +384,16 @@ class Translator(object):
     def _get_test_data(self, from_index=0, to_index=None):
         return self._get_encoded_data(self.test_dataset, from_index, to_index)
 
-    def _test_data_gen(self, batch_size, infinite=True):
+    def _test_data_gen(self, batch_size, infinite=True, return_steps=False):
         """
         # vocabularies of test dataset has to be the same as of training set
         # otherwise embeddings would not correspond are use OOV
         # and y one hot encodings wouldnt correspond either
 
         Args:
-            infinite: whether to run infinitely or just do one loop over the dataset
+            batch_size (int): size of the batch
+            infinite (bool): whether to run infinitely or just do one loop over the dataset
+            return_steps (bool): whether to return number of steps for the whole epoch as a first yield
 
         Yields: x inputs, y inputs
 
@@ -399,6 +401,10 @@ class Translator(object):
 
         i = 0
         once_through = False
+
+        if return_steps:
+            steps = self.test_dataset.num_samples / batch_size
+            yield math.ceil(steps)
 
         while infinite or not once_through:
             test_data = self._get_test_data(i, i + batch_size)
@@ -762,8 +768,8 @@ class Translator(object):
 
         return math.ceil(dataset.num_samples / batch_size)
 
-    def fit(self, epochs=1, initial_epoch=0, batch_size=64, validation_split=0.0, use_fit_generator=False,
-            bucketing=False, bucket_range=3):
+    def fit(self, epochs=1, initial_epoch=0, batch_size=64, use_fit_generator=False,
+            bucketing=False, bucket_range=3, early_stopping_patience=-1):
         """
 
         fits the model, according to the parameters passed in constructor
@@ -772,11 +778,11 @@ class Translator(object):
             epochs: Number of epochs
             initial_epoch: Epoch number from which to start
             batch_size: Size of one batch
-            validation_split (float): How big proportion of a development dataset should be used for validation during fiting
             use_fit_generator: Prevent memory crash by only load part of the dataset at once each time when fitting
             bucketing (bool): Whether to bucket sequences according their size to optimize padding
                 automatically switches use_fit_generator to True
             bucket_range (int): Range of different sequence lenghts in one bucket
+            early_stopping_patience (int): How many epochs should model train after loss/val_loss decreases. -1 means that early stopping won't be used.
 
         """
 
@@ -786,10 +792,18 @@ class Translator(object):
         # logging for tensorboard
         tensorboard_callback = TensorBoard(log_dir="{}".format(self.log_folder),
                                            write_graph=False)  # quite SLOW LINE
+
+        monitor_value = "val_loss"
+
         # model saving after each epoch
-        checkpoint_callback = ModelCheckpoint(self.model_weights_path, save_weights_only=True)
+        checkpoint_callback = ModelCheckpoint(self.model_weights_path, monitor=monitor_value,
+                                              save_weights_only=True, save_best_only=True)
 
         callbacks = [tensorboard_callback, checkpoint_callback]
+
+        if early_stopping_patience >= 0:
+            early_stopping = EarlyStopping(monitor=monitor_value, patience=early_stopping_patience, verbose=True)
+            callbacks.append(early_stopping)
 
         logger.info("fitting the model...")
 
@@ -804,19 +818,28 @@ class Translator(object):
                 generator = self._training_data_gen(batch_size, infinite=True,
                                                     shuffle=True)
 
+            test_data_generator = self._test_data_gen(batch_size, infinite=True, return_steps=True)
+
             # first returned value from the generator is number of steps for one epoch
             steps = next(generator)
+            test_steps = next(test_data_generator)
 
             logger.info("traning generator will make {} steps".format(steps))
-            # TODO why is there no validation split
+
             self.model.fit_generator(generator,
                                      steps_per_epoch=steps,
                                      epochs=epochs,
                                      initial_epoch=initial_epoch,
-                                     callbacks=callbacks
+                                     callbacks=callbacks,
+                                     validation_data=test_data_generator,
+                                     validation_steps=test_steps
                                      )
         else:
             training_data = self._get_training_data()
+            test_data = self._get_test_data()
+
+            test_data = ([test_data["encoder_input_data"], test_data["decoder_input_data"]],
+                         test_data["decoder_target_data"])
 
             self.model.fit(
                 [
@@ -827,7 +850,7 @@ class Translator(object):
                 batch_size=batch_size,
                 epochs=epochs,
                 initial_epoch=initial_epoch,
-                validation_split=validation_split,
+                validation_data=test_data,
                 callbacks=callbacks
             )
 
