@@ -194,9 +194,9 @@ def test_translating_small_dataset_multiple_layers():
     translator = Translator(training_dataset="data/small", test_dataset="data/smallTest",
                             source_lang="cs", target_lang="en", log_folder="logs",
                             model_folder="data", model_file="model.h5",
-                            num_encoder_layers=4, num_decoder_layers=2)
+                            num_encoder_layers=4, num_decoder_layers=3)
 
-    translator.fit(epochs=130, bucketing=True, bucket_range=2, early_stopping_patience=15)
+    translator.fit(epochs=200, bucketing=True, bucket_range=2, early_stopping_patience=15)
 
     translator.translate_test_data()
 
@@ -416,8 +416,19 @@ def test_define_models_multiple_layers():
     decoder_layer_1 = model.get_layer(name="decoder_layer_1")
     output_layer = model.get_layer(name="output_layer")
 
-    assert len(model.layers) == 15
+    assert len(model.layers) == 13
 
-    assert len(decoder_model.layers) == 12
+    assert len(decoder_model.layers) == 11
 
-    assert len(encoder_model.layers) == 5
+    assert len(encoder_model.layers) == 4
+
+
+def test_define_models_dropout():
+    translator = Translator(training_dataset="data/small", test_dataset="data/smallTest",
+                            source_lang="cs", target_lang="en", log_folder="logs",
+                            model_folder="data", model_file="model.h5",
+                            num_encoder_layers=4, num_decoder_layers=3, dropout=0.2)
+
+    model, encoder_model, decoder_model = translator._define_models()
+
+    assert True

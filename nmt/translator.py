@@ -13,6 +13,7 @@ import nmt.utils as utils
 from nmt import SpecialSymbols, Dataset, Vocabulary, Candidate
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from keras.layers import LSTM, Dense, Embedding, Input, Bidirectional, Concatenate, Average, Dropout
+from keras.layers.merge import add
 from keras.models import Model
 from keras.preprocessing.text import text_to_word_sequence
 
@@ -47,7 +48,7 @@ class Translator(object):
             max_source_embedding_num (int): how many first lines from embedding file should be loaded, None means all of them
             source_lang (str): Source language (dataset file extension)
             num_units (str): Size of each network layer
-            dropout (int): Size of dropout
+            dropout (float): Size of dropout
             optimizer (str): Keras optimizer name
             log_folder (str): Path where the result logs will be stored
             max_source_vocab_size (int): Maximum size of source vocabulary
@@ -512,22 +513,28 @@ class Translator(object):
         # TODO concatenation would require decoder to be twice encoder size (because decoder is initialized with states from encoder), using avg instead - IS IT OK?
         # only first layer is bidirectional (too much params if all of them were)
         # its OK to have return_sequences here as encoder outputs are not used anyway in the decoder and it is needed for multi layer encoder
-        bidirectional_encoder = Bidirectional(LSTM(self.num_units, return_state=True, return_sequences=True),
+        bidirectional_encoder = Bidirectional(LSTM(self.num_units, return_state=True, return_sequences=True,
+                                                   dropout=self.dropout, recurrent_dropout=self.dropout),
                                               name="bidirectional_encoder_layer")
         # h is inner(output) state, c i memory cell
-        encoder_outputs, forward_h, forward_c, backward_h, backward_c = bidirectional_encoder(source_embedding_outputs)
+        inputs = source_embedding_outputs
+        encoder_outputs, forward_h, forward_c, backward_h, backward_c = bidirectional_encoder(inputs)
         state_h = Average()([forward_h, backward_h])
         state_c = Average()([forward_c, backward_c])
 
         # multiple encoder layers
         for i in range(1, self.num_encoder_layers):
-            # dropout around lstm layers as in paper Recurrent neural network regularization
-            # TODO find the correct dropout value
-            # source_embedding_outputs = Dropout(self.dropout)(source_embedding_outputs)
-            # muzu se inspirovat tady https://github.com/farizrahman4u/seq2seq/blob/master/seq2seq/models.py
-            encoder_outputs = Dropout(self.dropout)(encoder_outputs)
+            # residual connections as in google's paper https://arxiv.org/abs/1609.08144
+            # if inputs (embeddings) size is different than LSTM's, sum has can be performed only from layer 2 on
+            # first layer is bidirectional (twice as big output) so it has to be skipped as well (i > 2)
+            if i > 2 or inputs.shape[-1] == self.num_units:
+                inputs = add([inputs, encoder_outputs])
+            else:
+                inputs = encoder_outputs
+
             encoder_outputs, state_h, state_c = LSTM(self.num_units, return_state=True, return_sequences=True,
-                                                     name="encoder_layer_{}".format(i + 1))(encoder_outputs)
+                                                     dropout=self.dropout, recurrent_dropout=self.dropout,
+                                                     name="encoder_layer_{}".format(i + 1))(inputs)
 
         # We discard `encoder_outputs` and only keep the states.
         encoder_states = [state_h, state_c]
@@ -542,22 +549,30 @@ class Translator(object):
                                       name="target_embeddings")
         target_embedding_outputs = target_embeddings(decoder_inputs)
 
+        inputs = target_embedding_outputs
         # We set up our decoder to return full output sequences,
         # and to return internal states as well. We don't use the
         # return states in the training model, but we will use them in inference.
         decoder_lstm = LSTM(self.num_units, return_sequences=True, return_state=True,
+                            dropout=self.dropout, recurrent_dropout=self.dropout,
                             name="decoder_layer_1")
-        decoder_outputs, _, _ = decoder_lstm(target_embedding_outputs,
+        decoder_outputs, _, _ = decoder_lstm(inputs,
                                              initial_state=encoder_states)
 
         # multiple decoder layers
         decoder_layers = []
         for i in range(1, self.num_decoder_layers):
-            decoder_outputs = Dropout(self.dropout)(decoder_outputs)
+            # residual connections
+            # if inputs (embeddings) size is different than LSTM's, sum has can be performed only from layer 2 on
+            if i > 1 or inputs.shape[-1] == self.num_units:
+                inputs = add([inputs, decoder_outputs])
+            else:
+                inputs = decoder_outputs
+
             decoder_layers.append(LSTM(self.num_units, return_state=True, return_sequences=True,
                                        name="decoder_layer_{}".format(i + 1)))
             # in the learning model, initial state of all decoder layers is encoder_states
-            decoder_outputs, _, _ = decoder_layers[-1](decoder_outputs, initial_state=encoder_states)
+            decoder_outputs, _, _ = decoder_layers[-1](inputs, initial_state=encoder_states)
 
         decoder_dense = Dense(self.target_vocab.vocab_len, activation='softmax',
                               name="output_layer")
@@ -578,19 +593,25 @@ class Translator(object):
         # Define sampling models
         encoder_model = Model(encoder_inputs, encoder_states)
 
+        inputs = target_embedding_outputs
         decoder_state_input_h = Input(shape=(self.num_units,), name="decoder_state_h_input")
         decoder_state_input_c = Input(shape=(self.num_units,), name="decoder_state_c_input")
         decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
         decoder_outputs, _, _ = decoder_lstm(
-            target_embedding_outputs, initial_state=decoder_states_inputs)
+            inputs, initial_state=decoder_states_inputs)
 
         for i, decoder_layer in enumerate(decoder_layers):
+            # residual connections
+            if i > 0 or inputs.shape[-1] == self.num_units:
+                inputs = add([inputs, decoder_outputs])
+            else:
+                inputs = decoder_outputs
+
             # every layer has to have its own inputs and outputs, because each outputs different state after first token
             # at the start all of the layers are initialized with encoder states
             # in inference, whole sequence has to be used as an input (not one word after another)
             # to get propper inner states in hidden layers
-            decoder_outputs = Dropout(self.dropout)(decoder_outputs)
-            decoder_outputs, _, _ = decoder_layer(decoder_outputs,
+            decoder_outputs, _, _ = decoder_layer(inputs,
                                                   initial_state=decoder_states_inputs)
 
         decoder_outputs = decoder_dense(decoder_outputs)
