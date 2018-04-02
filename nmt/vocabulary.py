@@ -11,6 +11,11 @@ class Vocabulary(object):
         Vocabulary used in Dataset class, handles all the tokens that are used for each language
     """
 
+    def merge_word_seq(self, word_seq):
+        for seq in word_seq:
+            for word in seq:
+                yield word
+
     def __init__(self, word_seq, max_vocab_size):
         """
 
@@ -22,7 +27,10 @@ class Vocabulary(object):
         # Creating the vocabulary set with the most common words
 
         # cannot use keras tokenizer, because we need to add our SpecialSymbols in the vocabuly and keras don't do that
-        dist = FreqDist(np.concatenate(word_seq))
+        logger.debug("loading word_seq into FreqDist")
+        # dist = FreqDist(np.concatenate(word_seq))
+        dist = FreqDist(self.merge_word_seq(word_seq))
+        logger.debug("finding most common {} tokens".format(max_vocab_size))
         vocab = dist.most_common(max_vocab_size)
 
         logger.debug("Truncating {} different words to {} words".format(len(dist), max_vocab_size))

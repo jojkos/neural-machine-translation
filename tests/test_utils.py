@@ -123,8 +123,9 @@ def test_tokenize():
 
 def test_split_lines():
     lines = ["first sentence", "second sentence"]
-    tokenized = utils.split_lines(lines)
-    assert tokenized == [["first", "sentence"], ["second", "sentence"]]
+    splitted_lines = [["first", "sentence"], ["second", "sentence"]]
+    utils.split_lines(lines)
+    assert lines == splitted_lines
 
 
 def test_incremental_average():

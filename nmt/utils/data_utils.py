@@ -261,23 +261,22 @@ def tokenize(lines):
 def split_lines(lines):
     """
 
-    Splits each line on ' ' character
+    Splits each line on ' ' character, in place
 
     Args:
-        lines (str[]): array of lines
-
-    Returns: returns array of splitted sequences
+        lines (str[]): array of lines thats splitted in place
 
     """
-    word_seq = []
 
-    for line in lines:
-        splitted = line.split(" ")
-        # skip empty lines
-        if len(splitted) > 0:
-            word_seq.append(splitted)
+    empty_indicies = []
 
-    return word_seq
+    for i in range(len(lines)):
+        splitted = lines[i].split(" ")
+        lines[i] = splitted
+
+        if not len(splitted) > 0:
+            print("EMPTY!")
+            empty_indicies.append(i)
 
 
 def convert_xmlset_to_text(path):

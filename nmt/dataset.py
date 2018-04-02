@@ -1,6 +1,7 @@
 import logging
 
 import nmt.utils as utils
+import sys
 from nmt import SpecialSymbols
 
 logger = logging.getLogger(__name__)
@@ -55,13 +56,23 @@ class Dataset(object):
             self.x_word_seq = utils.tokenize(x_lines)
             self.y_word_seq = utils.tokenize(y_lines)
         else:
-            self.x_word_seq = utils.split_lines(x_lines)
-            self.y_word_seq = utils.split_lines(y_lines)
+            logger.debug("splitting {} x sequences".format(self.dataset_path))
+            # splitting is done in place
+            utils.split_lines(x_lines)
+            self.x_word_seq = x_lines
 
+            logger.debug("splitting {} y sequences".format(self.dataset_path))
+            utils.split_lines(y_lines)
+            self.y_word_seq = y_lines
+
+        logger.debug("encapsulating y sequences with special symbols")
+        sys.stdout.flush()
         for i in range(len(self.y_word_seq)):
             self.y_word_seq[i] = [SpecialSymbols.GO] + self.y_word_seq[i] + [SpecialSymbols.EOS]
 
+        logger.debug("finding max x seq len")
         self.x_max_seq_len = max(len(seq) for seq in self.x_word_seq)
+        logger.debug("finding max y seq len")
         self.y_max_seq_len = max(len(seq) for seq in self.y_word_seq)
 
         logger.info("Max sequence length for inputs: {}".format(self.x_max_seq_len))
