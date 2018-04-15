@@ -144,7 +144,7 @@
 <li><strong>max_source_embedding_num</strong> (<em>int</em>) – how many first lines from embedding file should be loaded, None means all of them</li>
 <li><strong>source_lang</strong> (<em>str</em>) – Source language (dataset file extension)</li>
 <li><strong>num_units</strong> (<em>str</em>) – Size of each network layer</li>
-<li><strong>dropout</strong> (<em>int</em>) – Size of dropout</li>
+<li><strong>dropout</strong> (<em>float</em>) – Size of dropout</li>
 <li><strong>optimizer</strong> (<em>str</em>) – Keras optimizer name</li>
 <li><strong>log_folder</strong> (<em>str</em>) – Path where the result logs will be stored</li>
 <li><strong>max_source_vocab_size</strong> (<em>int</em>) – Maximum size of source vocabulary</li>
@@ -219,16 +219,8 @@ Target words are encoded to one hot vectors of target vocabulary length</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="nmt.translator.Translator.evaluate">
-<code class="descname">evaluate</code><span class="sig-paren">(</span><em>batch_size=64</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.evaluate" title="Permalink to this definition">¶</a></dt>
-<dd><p>performs evaluation on test dataset along with generating translations
-and calculating BLEU score for the dataset</p>
-<p>Returns: Keras model.evaluate values</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="nmt.translator.Translator.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>epochs=1</em>, <em>initial_epoch=0</em>, <em>batch_size=64</em>, <em>validation_split=0.0</em>, <em>use_fit_generator=False</em>, <em>bucketing=False</em>, <em>bucket_range=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.fit" title="Permalink to this definition">¶</a></dt>
+<code class="descname">fit</code><span class="sig-paren">(</span><em>epochs=1</em>, <em>initial_epoch=0</em>, <em>batch_size=64</em>, <em>use_fit_generator=False</em>, <em>bucketing=False</em>, <em>bucket_range=3</em>, <em>early_stopping_patience=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>fits the model, according to the parameters passed in constructor</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -238,16 +230,23 @@ and calculating BLEU score for the dataset</p>
 <li><strong>epochs</strong> – Number of epochs</li>
 <li><strong>initial_epoch</strong> – Epoch number from which to start</li>
 <li><strong>batch_size</strong> – Size of one batch</li>
-<li><strong>validation_split</strong> (<em>float</em>) – How big proportion of a development dataset should be used for validation during fiting</li>
 <li><strong>use_fit_generator</strong> – Prevent memory crash by only load part of the dataset at once each time when fitting</li>
 <li><strong>bucketing</strong> (<em>bool</em>) – Whether to bucket sequences according their size to optimize padding
 automatically switches use_fit_generator to True</li>
 <li><strong>bucket_range</strong> (<em>int</em>) – Range of different sequence lenghts in one bucket</li>
+<li><strong>early_stopping_patience</strong> (<em>int</em>) – How many epochs should model train after loss/val_loss decreases. -1 means that early stopping won’t be used.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.get_bleu_for_test_data_translation">
+<code class="descname">get_bleu_for_test_data_translation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.get_bleu_for_test_data_translation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.get_bleu_for_test_data_translation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return BLEU score for previously generated translation (with translate_test_data)</p>
+<p>Returns (float): BLEU score</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -297,6 +296,12 @@ automatically switches use_fit_generator to True</li>
 <dt id="nmt.translator.Translator.translate_sequence_beam">
 <code class="descname">translate_sequence_beam</code><span class="sig-paren">(</span><em>input_seq</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate_sequence_beam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate_sequence_beam" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.translate_test_data">
+<code class="descname">translate_test_data</code><span class="sig-paren">(</span><em>batch_size=64</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate_test_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate_test_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates translations for the test dataset, stores them in ‘.translated’ file</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -358,6 +363,11 @@ automatically switches use_fit_generator to True</li>
 </tbody>
 </table>
 </dd></dl>
+
+<dl class="method">
+<dt id="nmt.vocabulary.Vocabulary.merge_word_seq">
+<code class="descname">merge_word_seq</code><span class="sig-paren">(</span><em>word_seq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/vocabulary.html#Vocabulary.merge_word_seq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.vocabulary.Vocabulary.merge_word_seq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -481,16 +491,15 @@ word on index 0 is considered to be PADDING and its weights are set to 0</li>
 <dl class="function">
 <dt id="nmt.utils.data_utils.split_lines">
 <code class="descclassname">nmt.utils.data_utils.</code><code class="descname">split_lines</code><span class="sig-paren">(</span><em>lines</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/data_utils.html#split_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.data_utils.split_lines" title="Permalink to this definition">¶</a></dt>
-<dd><p>Splits each line on ‘ ‘ character</p>
+<dd><p>Splits each line on ‘ ‘ character, in place</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lines</strong> (<em>str</em><em>[</em><em>]</em>) – array of lines</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lines</strong> (<em>str</em><em>[</em><em>]</em>) – array of lines thats splitted in place</td>
 </tr>
 </tbody>
 </table>
-<p>Returns: returns array of splitted sequences</p>
 </dd></dl>
 
 <dl class="function">
@@ -545,7 +554,7 @@ with bucket_size=3 sequences with length 1-3 falls in same bucket)</p>
 :param paths: array of paths to files with lines of sentences
 :param symbols: how many symbols to learn</p>
 <p class="rubric">Example</p>
-<p>script_utils.create_bpe_dataset([“G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.cs”, “G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.en”], 10)</p>
+<p>script_utils.create_bpe_dataset([“G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.cs”, “G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.en”], 15000)</p>
 </dd></dl>
 
 <dl class="function">
@@ -582,6 +591,20 @@ with bucket_size=3 sequences with length 1-3 falls in same bucket)</p>
 <dt id="nmt.utils.script_utils.get_script_path">
 <code class="descclassname">nmt.utils.script_utils.</code><code class="descname">get_script_path</code><span class="sig-paren">(</span><em>script_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/script_utils.html#get_script_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.script_utils.get_script_path" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="function">
+<dt id="nmt.utils.script_utils.restore_subwords">
+<code class="descclassname">nmt.utils.script_utils.</code><code class="descname">restore_subwords</code><span class="sig-paren">(</span><em>paths</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/utils/script_utils.html#restore_subwords"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.utils.script_utils.restore_subwords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restores subword units to words in the files, previosly generated by nmtSubwords (methods create_bpe_dataset and create_bpe_testdataset)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>paths</strong> – string path or array of paths to the files</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </div>
 <div class="section" id="id1">

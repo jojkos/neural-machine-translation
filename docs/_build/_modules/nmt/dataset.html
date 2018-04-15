@@ -43,6 +43,7 @@
 <span></span><span class="kn">import</span> <span class="nn">logging</span>
 
 <span class="kn">import</span> <span class="nn">nmt.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">nmt</span> <span class="k">import</span> <span class="n">SpecialSymbols</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -97,13 +98,23 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">x_word_seq</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">x_lines</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">y_lines</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">x_word_seq</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">split_lines</span><span class="p">(</span><span class="n">x_lines</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">split_lines</span><span class="p">(</span><span class="n">y_lines</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;splitting </span><span class="si">{}</span><span class="s2"> x sequences&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_path</span><span class="p">))</span>
+            <span class="c1"># splitting is done in place</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">split_lines</span><span class="p">(</span><span class="n">x_lines</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_word_seq</span> <span class="o">=</span> <span class="n">x_lines</span>
 
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;splitting </span><span class="si">{}</span><span class="s2"> y sequences&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset_path</span><span class="p">))</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">split_lines</span><span class="p">(</span><span class="n">y_lines</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span> <span class="o">=</span> <span class="n">y_lines</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;encapsulating y sequences with special symbols&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">)):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">GO</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">SpecialSymbols</span><span class="o">.</span><span class="n">EOS</span><span class="p">]</span>
 
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;finding max x seq len&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">x_max_seq_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_word_seq</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;finding max y seq len&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">y_max_seq_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_word_seq</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Max sequence length for inputs: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_max_seq_len</span><span class="p">))</span>

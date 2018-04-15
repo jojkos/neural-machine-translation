@@ -45,6 +45,7 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -72,14 +73,17 @@
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">hypothesis_file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hypothesis_file</span><span class="p">:</span>
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;perl&quot;</span><span class="p">,</span> <span class="n">get_script_path</span><span class="p">(</span><span class="s2">&quot;multi-bleu.perl&quot;</span><span class="p">),</span> <span class="n">reference_file_path</span><span class="p">]</span>
 
-        <span class="n">popen</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">stdin</span><span class="o">=</span><span class="n">hypothesis_file</span><span class="p">)</span>  <span class="c1"># , stdout=subprocess.PIPE, stderr=subprocess.PIPE</span>
-        <span class="n">popen</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span></div>
-        <span class="c1"># output = popen.stdout.read()</span>
-        <span class="c1"># err_output = popen.stderr.read()</span>
+        <span class="n">popen</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">stdin</span><span class="o">=</span><span class="n">hypothesis_file</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span>  <span class="c1"># , stdout=subprocess.PIPE, stderr=subprocess.PIPE</span>
+        <span class="n">popen</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">popen</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
         <span class="c1"># print(&quot;output:&quot;, output)</span>
+        <span class="c1"># err_output = popen.stderr.read()</span>
         <span class="c1"># print(&quot;error output:&quot;, err_output)</span>
 
-        <span class="c1"># TODO return the value instead of letting it print it</span>
+        <span class="n">bleu</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">bleu</span></div>
 
 
 <div class="viewcode-block" id="create_bpe_dataset"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.script_utils.create_bpe_dataset">[docs]</a><span class="k">def</span> <span class="nf">create_bpe_dataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">symbols</span><span class="p">):</span>
@@ -90,7 +94,7 @@
 <span class="sd">        symbols: how many symbols to learn</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">         script_utils.create_bpe_dataset([&quot;G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.cs&quot;, &quot;G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.en&quot;], 10)</span>
+<span class="sd">         script_utils.create_bpe_dataset([&quot;G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.cs&quot;, &quot;G:/Clouds/DPbigFiles/WMT17/devSet/newstest2015-csen.en&quot;], 15000)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">codes_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;/codesfile&quot;</span>
 
@@ -125,6 +129,27 @@
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;python&quot;</span><span class="p">,</span> <span class="n">get_script_path</span><span class="p">(</span><span class="s2">&quot;subword-nmt/apply_bpe.py&quot;</span><span class="p">),</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="n">codefile_path</span><span class="p">,</span>
                 <span class="s2">&quot;--vocabulary&quot;</span><span class="p">,</span> <span class="n">vocab_paths</span><span class="p">[</span><span class="n">ix</span><span class="p">],</span> <span class="s2">&quot;--input&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="s2">&quot;--output&quot;</span><span class="p">,</span> <span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;.BPE&quot;</span><span class="p">]</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">args</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="restore_subwords"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.script_utils.restore_subwords">[docs]</a><span class="k">def</span> <span class="nf">restore_subwords</span><span class="p">(</span><span class="n">paths</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Restores subword units to words in the files, previosly generated by nmtSubwords (methods create_bpe_dataset and create_bpe_testdataset)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        paths: string path or array of paths to the files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">paths</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(@@ )|(@@ ?$)&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>

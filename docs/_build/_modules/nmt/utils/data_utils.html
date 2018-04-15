@@ -135,7 +135,6 @@
 
     <span class="c1"># don&#39;t know how to limit size of vocabulary with FastText</span>
     <span class="c1"># loading the whole model takes too much time</span>
-    <span class="c1"># TODO use FastText (.bin) for final version, because it can generate vectors for OOV words from ngrams</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">FastText</span><span class="o">.</span><span class="n">load_fasttext_format</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
     <span class="c1"># model = KeyedVectors.load_word2vec_format(path, limit=limit)</span>
@@ -160,11 +159,6 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># logging.warning(&quot;out of vocabulary word: {}&quot;.format(word))</span>
             <span class="n">oov_words</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="c1"># Init random weights for out of vocabulary word</span>
-            <span class="c1"># TODO are the values in range (-1, 1)?</span>
-            <span class="c1"># weight = np.random.uniform(low=-1.0, high=1.0, size=dim)</span>
-
-            <span class="c1"># TODO in final version change to fastText model</span>
             <span class="n">weight</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">seeded_vector</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())</span>
             <span class="c1"># https://www.quora.com/How-does-fastText-output-a-vector-for-a-word-that-is-not-in-the-pre-trained-model</span>
 
@@ -295,7 +289,6 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;tokenizing lines...&quot;</span><span class="p">)</span>
-    <span class="c1"># TODO use tokenization from Moses so its same as for Moses baseline model</span>
     <span class="n">word_seq</span> <span class="o">=</span> <span class="p">[</span><span class="n">text_to_word_sequence</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">]</span>
 
     <span class="k">return</span> <span class="n">word_seq</span></div>
@@ -304,23 +297,22 @@
 <div class="viewcode-block" id="split_lines"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.split_lines">[docs]</a><span class="k">def</span> <span class="nf">split_lines</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="sd">    Splits each line on &#39; &#39; character</span>
+<span class="sd">    Splits each line on &#39; &#39; character, in place</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        lines (str[]): array of lines</span>
-
-<span class="sd">    Returns: returns array of splitted sequences</span>
+<span class="sd">        lines (str[]): array of lines thats splitted in place</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">word_seq</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-        <span class="n">splitted</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
-        <span class="c1"># skip empty lines</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">splitted</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">word_seq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">splitted</span><span class="p">)</span>
+    <span class="n">empty_indicies</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="k">return</span> <span class="n">word_seq</span></div>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)):</span>
+        <span class="n">splitted</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+        <span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">splitted</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;EMPTY!&quot;</span><span class="p">)</span>
+            <span class="n">empty_indicies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="convert_xmlset_to_text"><a class="viewcode-back" href="../../../nmt.utils.html#nmt.utils.data_utils.convert_xmlset_to_text">[docs]</a><span class="k">def</span> <span class="nf">convert_xmlset_to_text</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>

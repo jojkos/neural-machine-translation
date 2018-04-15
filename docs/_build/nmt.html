@@ -176,16 +176,8 @@ Target words are encoded to one hot vectors of target vocabulary length</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="nmt.translator.Translator.evaluate">
-<code class="descname">evaluate</code><span class="sig-paren">(</span><em>batch_size=64</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.evaluate" title="Permalink to this definition">¶</a></dt>
-<dd><p>performs evaluation on test dataset along with generating translations
-and calculating BLEU score for the dataset</p>
-<p>Returns: Keras model.evaluate values</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="nmt.translator.Translator.fit">
-<code class="descname">fit</code><span class="sig-paren">(</span><em>epochs=1</em>, <em>initial_epoch=0</em>, <em>batch_size=64</em>, <em>validation_split=0.0</em>, <em>use_fit_generator=False</em>, <em>bucketing=False</em>, <em>bucket_range=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.fit" title="Permalink to this definition">¶</a></dt>
+<code class="descname">fit</code><span class="sig-paren">(</span><em>epochs=1</em>, <em>initial_epoch=0</em>, <em>batch_size=64</em>, <em>use_fit_generator=False</em>, <em>bucketing=False</em>, <em>bucket_range=3</em>, <em>early_stopping_patience=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>fits the model, according to the parameters passed in constructor</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -195,16 +187,23 @@ and calculating BLEU score for the dataset</p>
 <li><strong>epochs</strong> – Number of epochs</li>
 <li><strong>initial_epoch</strong> – Epoch number from which to start</li>
 <li><strong>batch_size</strong> – Size of one batch</li>
-<li><strong>validation_split</strong> (<em>float</em>) – How big proportion of a development dataset should be used for validation during fiting</li>
 <li><strong>use_fit_generator</strong> – Prevent memory crash by only load part of the dataset at once each time when fitting</li>
 <li><strong>bucketing</strong> (<em>bool</em>) – Whether to bucket sequences according their size to optimize padding
 automatically switches use_fit_generator to True</li>
 <li><strong>bucket_range</strong> (<em>int</em>) – Range of different sequence lenghts in one bucket</li>
+<li><strong>early_stopping_patience</strong> (<em>int</em>) – How many epochs should model train after loss/val_loss decreases. -1 means that early stopping won’t be used.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nmt.translator.Translator.get_bleu_for_test_data_translation">
+<code class="descname">get_bleu_for_test_data_translation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.get_bleu_for_test_data_translation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.get_bleu_for_test_data_translation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return BLEU score for previously generated translation (with translate_test_data)</p>
+<p>Returns (float): BLEU score</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -255,6 +254,12 @@ automatically switches use_fit_generator to True</li>
 <code class="descname">translate_sequence_beam</code><span class="sig-paren">(</span><em>input_seq</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate_sequence_beam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate_sequence_beam" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="method">
+<dt id="nmt.translator.Translator.translate_test_data">
+<code class="descname">translate_test_data</code><span class="sig-paren">(</span><em>batch_size=64</em>, <em>beam_size=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/translator.html#Translator.translate_test_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.translator.Translator.translate_test_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates translations for the test dataset, stores them in ‘.translated’ file</p>
+</dd></dl>
+
 </dd></dl>
 
 </div>
@@ -298,6 +303,11 @@ automatically switches use_fit_generator to True</li>
 </tbody>
 </table>
 </dd></dl>
+
+<dl class="method">
+<dt id="nmt.vocabulary.Vocabulary.merge_word_seq">
+<code class="descname">merge_word_seq</code><span class="sig-paren">(</span><em>word_seq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nmt/vocabulary.html#Vocabulary.merge_word_seq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nmt.vocabulary.Vocabulary.merge_word_seq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
