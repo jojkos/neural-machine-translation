@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nmt',
-    version='0.1.0',
+    version='0.9.0',
     description='Python package for developing models capable of translating text from on language to another using neural network created in Keras.',
     license='MIT',
     packages=find_packages(),

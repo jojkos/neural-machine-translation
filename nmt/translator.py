@@ -510,7 +510,7 @@ class Translator(object):
 
         # use bi-directional encoder with concatenation as in Google neural machine translation paper
         # https://stackoverflow.com/questions/47923370/keras-bidirectional-lstm-seq2seq
-        # TODO concatenation would require decoder to be twice encoder size (because decoder is initialized with states from encoder), using avg instead - IS IT OK?
+
         # only first layer is bidirectional (too much params if all of them were)
         # its OK to have return_sequences here as encoder outputs are not used anyway in the decoder and it is needed for multi layer encoder
         bidirectional_encoder = Bidirectional(LSTM(self.num_units, return_state=True, return_sequences=True,
@@ -662,7 +662,7 @@ class Translator(object):
             decoded_len = len(decoded_sentence.strip().split(" "))
 
             if decoded_len > self.training_dataset.y_max_seq_len \
-                    and decoded_len > self.test_dataset.y_max_seq_len:  # TODO maybe change to arbitrary long?
+                    and decoded_len > self.test_dataset.y_max_seq_len:
                 break
 
             # Update the target sequence, add last samples word.
@@ -731,7 +731,7 @@ class Translator(object):
                         decoded_len = new_candidate.get_sentence_length()
 
                         if decoded_len > self.training_dataset.y_max_seq_len \
-                                and decoded_len > self.test_dataset.y_max_seq_len:  # TODO maybe change to arbitrary long?
+                                and decoded_len > self.test_dataset.y_max_seq_len:
                             new_candidate.finalise()
                             continue
 

@@ -16,9 +16,7 @@ Use it with `import nmt`
 Complete documentation of Translator api is [here](https://rawgit.com/jojkos/neural-machine-translation/master/docs/_build/index.html#module-nmt.translator)
 
 Exmaple of script running nmt library [main.py](https://github.com/jojkos/master-thesis/blob/master/code/main.py)
-```
-TODO show how tun run the main.py
-```
+
 
 ## Documentation
 - Prebuilt documentation is in docs/_build/
