@@ -44,10 +44,12 @@ class Translator(object):
         Args:
             source_embedding_dim (int): Dimension of embeddings
             target_embedding_dim (int): Dimension of embeddings
+            source_embedding_path (str): Path to pretrained fastText embeddings file
             target_embedding_path (str): Path to pretrained fastText embeddings file
             max_source_embedding_num (int): how many first lines from embedding file should be loaded, None means all of them
+            max_target_embedding_num (int): how many first lines from embedding file should be loaded, None means all of them
             source_lang (str): Source language (dataset file extension)
-            num_units (str): Size of each network layer
+            num_units (int): Size of each network layer
             dropout (float): Size of dropout
             optimizer (str): Keras optimizer name
             log_folder (str): Path where the result logs will be stored
