@@ -29,7 +29,7 @@ class Vocabulary(object):
         # cannot use keras tokenizer, because we need to add our SpecialSymbols in the vocabuly and keras don't do that
         logger.debug("loading word_seq into FreqDist")
         # dist = FreqDist(np.concatenate(word_seq))
-        dist = FreqDist(self.merge_word_seq(word_seq))
+        dist = FreqDist(self.merge_word_seq(word_seq)) # use generator to prevent memory fail
         logger.debug("finding most common {} tokens".format(max_vocab_size))
         vocab = dist.most_common(max_vocab_size)
 
